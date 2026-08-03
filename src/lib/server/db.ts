@@ -123,10 +123,10 @@ You can request a refund within 14 days of purchase if you have used fewer than 
   await cols.chatbots.insertOne({
     _id: chatbotId,
     userId,
-    name: 'Acme Support Bot',
+    name: 'Athena',
     description: 'Answers questions using the sample Acme product docs.',
     systemPrompt:
-      'Answer helpfully and naturally, like a human support agent. Stick to what you know about this product or topic. If you are unsure, say so briefly — do not invent details.',
+      'You are Athena. Answer helpfully and naturally, like a human support agent. Stick to what you know about this product or topic. If you are unsure, say so briefly — do not invent details.',
     published: true,
     createdAt: now,
     updatedAt: now,
@@ -166,12 +166,12 @@ You can request a refund within 14 days of purchase if you have used fewer than 
     sessionId,
     role: 'assistant',
     content:
-      'Hi! I can answer questions about Acme Cloud using the uploaded docs. What would you like to know?',
+      "Hi! I'm Athena. I can answer questions about Acme Cloud using the uploaded docs. What would you like to know?",
     createdAt: now,
   });
 
   console.log(
-    'Seeded demo user demo@example.com / password123 with Acme Support Bot',
+    'Seeded demo user demo@example.com / password123 with Athena',
   );
 }
 

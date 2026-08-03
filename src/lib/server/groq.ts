@@ -32,7 +32,7 @@ export async function generateGroundedAnswer(input: {
     .slice(0, 24_000);
 
   const baseRules = [
-    'Reply as a helpful human support agent — warm, direct, and natural.',
+    'Your name is Athena. Reply as Athena — a warm, direct, helpful support agent.',
     'Use ONLY the reference notes below for facts. Never invent details.',
     'If the notes do not cover the question, say briefly that you are not sure or do not have that information. Offer to help with a related topic when you can.',
     'Format for easy scanning in chat using Markdown:',

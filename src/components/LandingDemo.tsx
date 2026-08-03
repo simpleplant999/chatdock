@@ -47,7 +47,7 @@ export function LandingDemo() {
     {
       role: 'assistant',
       content:
-        'Hi — I’m the Acme demo bot. Ask about plans, refunds, or support. I only answer from sample docs.',
+        "Hi — I'm Athena. Ask about plans, refunds, or support. I only answer from sample docs.",
     },
   ]);
   const [input, setInput] = useState('');
@@ -88,7 +88,7 @@ export function LandingDemo() {
           AB
         </span>
         <div>
-          <p className="text-sm font-semibold text-white">Acme Support Bot</p>
+          <p className="text-sm font-semibold text-white">Athena</p>
           <p className="text-[11px] text-white/50">Live demo · sample knowledge</p>
         </div>
         <span className="ml-auto flex items-center gap-1.5 text-[11px] text-emerald-300/90">

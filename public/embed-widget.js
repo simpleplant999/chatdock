@@ -28,7 +28,7 @@
   }
 
   var color = script.getAttribute('data-color') || '#0f766e';
-  var title = script.getAttribute('data-title') || 'Chat with us';
+  var title = script.getAttribute('data-title') || 'Athena';
   var srcBase = (script.getAttribute('src') || '').replace(
     /\/embed-widget\.js(?:\?.*)?$/i,
     '',

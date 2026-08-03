@@ -1,6 +1,7 @@
 'use client';
 
 import { FormEvent, useEffect, useRef, useState } from 'react';
+import { ASSISTANT_NAME } from '@/lib/assistant';
 import { api, ChatMessage, ChatSession } from '@/lib/api';
 import { ChatMarkdown } from '@/components/ChatMarkdown';
 
@@ -147,9 +148,9 @@ export function ChatPanel({ chatbotId }: { chatbotId: string }) {
     <div className="mx-auto flex h-full min-h-0 w-full max-w-xl flex-col overflow-hidden rounded-2xl border border-[var(--line)] bg-white shadow-sm">
       <div className="flex shrink-0 items-center justify-between border-b border-[var(--line)] px-3 py-2.5">
         <div>
-          <p className="text-sm font-semibold">Playground</p>
+          <p className="text-sm font-semibold">{ASSISTANT_NAME}</p>
           <p className="text-[11px] text-[var(--ink-soft)]">
-            Answers from your knowledge base
+            Playground · answers from your knowledge base
           </p>
         </div>
         <button

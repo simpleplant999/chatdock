@@ -25,7 +25,7 @@ export function EmbedPanel({
 
   const widgetSrc = `${origin}/embed-widget.js`;
   const embedUrl = `${origin}/embed/${bot.id}`;
-  const safeTitle = bot.name.replace(/"/g, '');
+  const safeTitle = 'Athena';
 
   const snippet = useMemo(
     () =>

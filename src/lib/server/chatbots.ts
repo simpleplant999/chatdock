@@ -48,7 +48,7 @@ export class ChatbotsService {
     const id = uuid();
     const systemPrompt =
       dto.systemPrompt?.trim() ||
-      'Answer helpfully and naturally, like a human support agent. Stick to what you know about this product or topic. If you are unsure, say so briefly — do not invent details.';
+      'You are Athena. Answer helpfully and naturally, like a human support agent. Stick to what you know about this product or topic. If you are unsure, say so briefly — do not invent details.';
 
     const db = await getDb();
     await db.chatbots.insertOne({

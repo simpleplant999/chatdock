@@ -1,6 +1,7 @@
 'use client';
 
 import { FormEvent, useEffect, useRef, useState } from 'react';
+import { ASSISTANT_NAME } from '@/lib/assistant';
 import { api, ChatMessage, ChatSession } from '@/lib/api';
 import { ChatMarkdown } from '@/components/ChatMarkdown';
 
@@ -18,7 +19,6 @@ const NEAR_BOTTOM_PX = 96;
  * Does not reuse previous sessions.
  */
 export function EmbedChat({ chatbotId }: { chatbotId: string }) {
-  const [botName, setBotName] = useState('Assistant');
   const [session, setSession] = useState<ChatSession | null>(null);
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const [input, setInput] = useState('');
@@ -36,15 +36,14 @@ export function EmbedChat({ chatbotId }: { chatbotId: string }) {
       setLoading(true);
       setError('');
       try {
-        const [bot, next, suggestionRes] = await Promise.all([
-          api.getPublicBot(chatbotId),
+        await api.getPublicBot(chatbotId);
+        const [next, suggestionRes] = await Promise.all([
           api.createPublicSession(chatbotId),
           api
             .listPublicSuggestions(chatbotId)
             .catch(() => ({ suggestions: [] as string[] })),
         ]);
         if (!cancelled) {
-          setBotName(bot.name);
           setSession(next);
           setSuggestions(suggestionRes.suggestions);
           stickToBottomRef.current = true;
@@ -165,7 +164,9 @@ export function EmbedChat({ chatbotId }: { chatbotId: string }) {
   return (
     <div className="flex h-full min-h-0 flex-col bg-white">
       <div className="shrink-0 border-b border-[var(--line)] px-3 py-2.5 pr-12">
-        <p className="text-sm font-semibold text-[var(--ink)]">{botName}</p>
+        <p className="text-sm font-semibold text-[var(--ink)]">
+          {ASSISTANT_NAME}
+        </p>
         <p className="text-[11px] text-[var(--ink-soft)]">
           Ask a question — each visit starts a new chat
         </p>

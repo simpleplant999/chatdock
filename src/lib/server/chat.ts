@@ -1,4 +1,5 @@
 import { v4 as uuid } from 'uuid';
+import { ASSISTANT_GREETING } from '@/lib/assistant';
 import { chatbotsService } from './chatbots';
 import { ChatMessageDoc, getDb } from './db';
 import { AppError } from './errors';
@@ -84,9 +85,7 @@ export class ChatService {
   ) {
     await chatbotsService.assertPublished(chatbotId);
     return this.createSessionForBot(chatbotId, {
-      greeting:
-        dto.greeting?.trim() ||
-        'Hi! How can I help you today?',
+      greeting: dto.greeting?.trim() || ASSISTANT_GREETING,
     });
   }
 
@@ -111,9 +110,7 @@ export class ChatService {
     const now = new Date().toISOString();
     const sessionId = uuid();
     const messageId = uuid();
-    const greeting =
-      dto.greeting?.trim() ||
-      'Hi! How can I help you today?';
+    const greeting = dto.greeting?.trim() || ASSISTANT_GREETING;
 
     const db = await getDb();
     await db.chatSessions.insertOne({

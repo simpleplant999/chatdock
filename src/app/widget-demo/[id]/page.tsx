@@ -23,7 +23,7 @@ export default function WidgetDemoPage() {
     script.src = `/embed-widget.js?t=${Date.now()}`;
     script.async = true;
     script.setAttribute('data-bot-id', params.id);
-    script.setAttribute('data-title', 'Chat with us');
+    script.setAttribute('data-title', 'Athena');
     document.body.appendChild(script);
 
     return () => {
