@@ -90,13 +90,9 @@ function ChatbotContent() {
       {tab === 'chat' ? (
         <ChatPanel chatbotId={bot.id} />
       ) : tab === 'sources' ? (
-        <div className="h-full min-h-0 overflow-y-auto overscroll-contain pb-2">
-          <SourcesPanel chatbotId={bot.id} />
-        </div>
+        <SourcesPanel chatbotId={bot.id} />
       ) : (
-        <div className="h-full min-h-0 overflow-y-auto overscroll-contain pb-2">
-          <EmbedPanel bot={bot} onUpdated={setBot} />
-        </div>
+        <EmbedPanel bot={bot} onUpdated={setBot} />
       )}
     </AppShell>
   );

@@ -189,11 +189,17 @@ export function AppShell({
         <main
           className={
             fullHeight
-              ? 'flex min-h-0 flex-1 flex-col p-4 sm:p-5'
-              : 'min-h-0 flex-1 overflow-y-auto p-4 sm:p-6'
+              ? 'flex min-h-0 flex-1 flex-col overflow-hidden p-4 sm:p-5'
+              : 'min-h-0 flex-1 overflow-y-auto overscroll-contain p-4 sm:p-6'
           }
         >
-          <div className={fullHeight ? 'min-h-0 flex-1' : 'mx-auto w-full max-w-6xl'}>
+          <div
+            className={
+              fullHeight
+                ? 'flex min-h-0 min-w-0 flex-1 flex-col'
+                : 'mx-auto w-full max-w-6xl pb-8'
+            }
+          >
             {children}
           </div>
         </main>

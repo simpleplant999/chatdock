@@ -2,6 +2,7 @@
 
 import { FormEvent, useEffect, useRef, useState } from 'react';
 import { api, ChatMessage, ChatSession } from '@/lib/api';
+import { ChatMarkdown } from '@/components/ChatMarkdown';
 
 const THINKING_STEPS = [
   'Reading your question…',
@@ -9,6 +10,8 @@ const THINKING_STEPS = [
   'Gathering relevant details…',
   'Drafting a detailed answer…',
 ];
+
+const NEAR_BOTTOM_PX = 96;
 
 /**
  * Embed chat UI. Always starts a brand-new session on mount / page refresh.
@@ -25,6 +28,7 @@ export function EmbedChat({ chatbotId }: { chatbotId: string }) {
   const [error, setError] = useState('');
   const listRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const stickToBottomRef = useRef(true);
 
   useEffect(() => {
     let cancelled = false;
@@ -43,6 +47,7 @@ export function EmbedChat({ chatbotId }: { chatbotId: string }) {
           setBotName(bot.name);
           setSession(next);
           setSuggestions(suggestionRes.suggestions);
+          stickToBottomRef.current = true;
         }
       } catch (err) {
         if (!cancelled) {
@@ -63,10 +68,12 @@ export function EmbedChat({ chatbotId }: { chatbotId: string }) {
   }, [chatbotId]);
 
   useEffect(() => {
+    if (!stickToBottomRef.current) return;
     const el = listRef.current;
     if (!el) return;
-    el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' });
-  }, [session?.messages.length, sending, thinkingStep]);
+    // Instant scroll — smooth fights touch/wheel while content is growing
+    el.scrollTop = el.scrollHeight;
+  }, [session?.messages.length, sending]);
 
   useEffect(() => {
     if (!sending) {
@@ -80,12 +87,20 @@ export function EmbedChat({ chatbotId }: { chatbotId: string }) {
     return () => window.clearInterval(id);
   }, [sending]);
 
+  function onListScroll() {
+    const el = listRef.current;
+    if (!el) return;
+    const distance = el.scrollHeight - el.scrollTop - el.clientHeight;
+    stickToBottomRef.current = distance <= NEAR_BOTTOM_PX;
+  }
+
   async function ask(raw: string) {
     if (!session || !raw.trim() || sending) return;
     const content = raw.trim();
     setInput('');
     setSending(true);
     setError('');
+    stickToBottomRef.current = true;
 
     const optimistic: ChatMessage = {
       id: `temp-${Date.now()}`,
@@ -133,7 +148,7 @@ export function EmbedChat({ chatbotId }: { chatbotId: string }) {
 
   if (loading) {
     return (
-      <div className="grid h-full place-items-center bg-white text-sm text-[var(--ink-soft)]">
+      <div className="grid h-full min-h-0 place-items-center bg-white text-sm text-[var(--ink-soft)]">
         Starting chat…
       </div>
     );
@@ -141,7 +156,7 @@ export function EmbedChat({ chatbotId }: { chatbotId: string }) {
 
   if (!session) {
     return (
-      <div className="grid h-full place-items-center bg-white p-4 text-center text-sm text-[var(--danger)]">
+      <div className="grid h-full min-h-0 place-items-center bg-white p-4 text-center text-sm text-[var(--danger)]">
         {error || 'Chatbot unavailable'}
       </div>
     );
@@ -149,7 +164,7 @@ export function EmbedChat({ chatbotId }: { chatbotId: string }) {
 
   return (
     <div className="flex h-full min-h-0 flex-col bg-white">
-      <div className="shrink-0 border-b border-[var(--line)] px-3 py-2.5">
+      <div className="shrink-0 border-b border-[var(--line)] px-3 py-2.5 pr-12">
         <p className="text-sm font-semibold text-[var(--ink)]">{botName}</p>
         <p className="text-[11px] text-[var(--ink-soft)]">
           Ask a question — each visit starts a new chat
@@ -158,55 +173,62 @@ export function EmbedChat({ chatbotId }: { chatbotId: string }) {
 
       <div
         ref={listRef}
-        className="min-h-0 flex-1 space-y-2.5 overflow-y-auto px-3 py-3"
+        onScroll={onListScroll}
+        className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-3 py-3 [-webkit-overflow-scrolling:touch]"
       >
-        {error && (
-          <p className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-xs text-[var(--danger)]">
-            {error}
-          </p>
-        )}
-        {session.messages.map((message) => (
-          <div
-            key={message.id}
-            className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
-          >
+        <div className="space-y-2.5">
+          {error && (
+            <p className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-xs text-[var(--danger)]">
+              {error}
+            </p>
+          )}
+          {session.messages.map((message) => (
             <div
-              className={`max-w-[78%] rounded-2xl px-3 py-2 text-[13px] leading-snug ${
-                message.role === 'user'
-                  ? 'rounded-br-md bg-[var(--ink)] text-white'
-                  : message.guardrail?.blocked
-                    ? 'rounded-bl-md border border-amber-200 bg-amber-50 text-[var(--ink)]'
-                    : 'rounded-bl-md bg-[var(--paper-2)] text-[var(--ink)]'
-              }`}
+              key={message.id}
+              className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
             >
-              <p className="whitespace-pre-wrap">{message.content}</p>
+              <div
+                className={`rounded-2xl px-3 py-2 text-[13px] leading-snug ${
+                  message.role === 'user'
+                    ? 'max-w-[78%] rounded-br-md bg-[var(--ink)] text-white'
+                    : message.guardrail?.blocked
+                      ? 'max-w-[92%] rounded-bl-md border border-amber-200 bg-amber-50 text-[var(--ink)]'
+                      : 'max-w-[92%] rounded-bl-md bg-[var(--paper-2)] text-[var(--ink)]'
+                }`}
+              >
+                {message.role === 'assistant' ? (
+                  <ChatMarkdown content={message.content} />
+                ) : (
+                  <p className="whitespace-pre-wrap">{message.content}</p>
+                )}
+              </div>
             </div>
-          </div>
-        ))}
-        {sending && (
-          <div className="flex justify-start">
-            <div className="max-w-[78%] rounded-2xl rounded-bl-md border border-[var(--line)] bg-[var(--paper-2)] px-3 py-2 text-[13px] text-[var(--ink-soft)]">
-              <div className="flex items-center gap-2.5">
-                <span className="thinking-dots" aria-hidden="true">
-                  <span />
-                  <span />
-                  <span />
-                </span>
-                <div>
-                  <p className="text-[13px] font-medium text-[var(--ink)]">
-                    Thinking
-                  </p>
-                  <p className="text-[11px]">{THINKING_STEPS[thinkingStep]}</p>
+          ))}
+          {sending && (
+            <div className="flex justify-start">
+              <div className="max-w-[78%] rounded-2xl rounded-bl-md border border-[var(--line)] bg-[var(--paper-2)] px-3 py-2 text-[13px] text-[var(--ink-soft)]">
+                <div className="flex items-center gap-2.5">
+                  <span className="thinking-dots" aria-hidden="true">
+                    <span />
+                    <span />
+                    <span />
+                  </span>
+                  <div>
+                    <p className="text-[13px] font-medium text-[var(--ink)]">
+                      Thinking
+                    </p>
+                    <p className="text-[11px]">{THINKING_STEPS[thinkingStep]}</p>
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
-        )}
+          )}
+        </div>
       </div>
 
       <div className="shrink-0 border-t border-[var(--line)] bg-[var(--paper)]/60 p-2.5">
         {suggestions.length > 0 && (
-          <div className="mb-2 flex flex-wrap gap-2">
+          <div className="mb-2 flex max-h-28 flex-wrap gap-2 overflow-y-auto overscroll-contain">
             {suggestions.map((s) => (
               <button
                 key={s}

@@ -2,6 +2,7 @@
 
 import { FormEvent, useEffect, useRef, useState } from 'react';
 import { api, ChatMessage, ChatSession } from '@/lib/api';
+import { ChatMarkdown } from '@/components/ChatMarkdown';
 
 const THINKING_STEPS = [
   'Reading your question…',
@@ -175,12 +176,12 @@ export function ChatPanel({ chatbotId }: { chatbotId: string }) {
             className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
           >
             <div
-              className={`max-w-[75%] rounded-2xl px-3 py-2 text-[13px] leading-snug ${
+              className={`rounded-2xl px-3 py-2 text-[13px] leading-snug ${
                 message.role === 'user'
-                  ? 'rounded-br-md bg-[var(--ink)] text-white'
+                  ? 'max-w-[75%] rounded-br-md bg-[var(--ink)] text-white'
                   : message.guardrail?.blocked
-                    ? 'rounded-bl-md border border-amber-200 bg-amber-50 text-[var(--ink)]'
-                    : 'rounded-bl-md bg-[var(--paper-2)] text-[var(--ink)]'
+                    ? 'max-w-[90%] rounded-bl-md border border-amber-200 bg-amber-50 text-[var(--ink)]'
+                    : 'max-w-[90%] rounded-bl-md bg-[var(--paper-2)] text-[var(--ink)]'
               }`}
             >
               {message.role === 'assistant' && message.guardrail?.blocked && (
@@ -188,7 +189,11 @@ export function ChatPanel({ chatbotId }: { chatbotId: string }) {
                   Guardrail · {message.guardrail.code || 'blocked'}
                 </p>
               )}
-              <p className="whitespace-pre-wrap">{message.content}</p>
+              {message.role === 'assistant' ? (
+                <ChatMarkdown content={message.content} />
+              ) : (
+                <p className="whitespace-pre-wrap">{message.content}</p>
+              )}
             </div>
           </div>
         ))}

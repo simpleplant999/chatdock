@@ -79,7 +79,7 @@ export function EmbedPanel({
   }, [bot.id, bot.published]);
 
   return (
-    <div className="mx-auto flex w-full max-w-3xl flex-col gap-8 pb-10">
+    <div className="mx-auto flex w-full max-w-3xl flex-col gap-8">
       {/* Publish */}
       <section className="rounded-2xl border border-[var(--line)] bg-white p-6 shadow-sm sm:p-8">
         <h2 className="font-display text-2xl tracking-tight">Website embed</h2>
@@ -204,7 +204,7 @@ export function EmbedPanel({
             </button>
           </div>
 
-          <div className="relative mt-5 h-[420px] overflow-hidden rounded-2xl border border-[var(--line)] bg-[#eef3f1] sm:h-[480px]">
+          <div className="relative mt-5 h-[520px] overflow-hidden rounded-2xl border border-[var(--line)] bg-[#eef3f1] sm:h-[560px]">
             {/* Fake host page */}
             <div className="pointer-events-none select-none p-5 sm:p-6">
               <div className="h-3 w-28 rounded-full bg-white/80" />
@@ -302,7 +302,7 @@ function PreviewBubble({
   return (
     <div className="absolute bottom-4 right-4 z-10 flex flex-col items-end gap-3 sm:bottom-5 sm:right-5">
       {open && (
-        <div className="relative h-[min(360px,58vh)] w-[min(340px,calc(100vw-3rem))] overflow-hidden rounded-2xl border border-black/10 bg-white shadow-[0_18px_50px_rgba(16,35,31,0.28)] sm:h-[380px] sm:w-[360px]">
+        <div className="relative h-[400px] w-[min(340px,calc(100vw-3rem))] overflow-hidden rounded-2xl border border-black/10 bg-white shadow-[0_18px_50px_rgba(16,35,31,0.28)] sm:w-[360px]">
           <button
             type="button"
             onClick={onClose}

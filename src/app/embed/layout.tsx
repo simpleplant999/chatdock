@@ -3,7 +3,10 @@ export default function EmbedLayout({
 }: {
   children: React.ReactNode;
 }) {
+  // fixed inset-0 avoids broken html/body height chains inside iframes
   return (
-    <div className="h-dvh w-full overflow-hidden bg-white">{children}</div>
+    <div className="fixed inset-0 flex flex-col overflow-hidden bg-white">
+      {children}
+    </div>
   );
 }
