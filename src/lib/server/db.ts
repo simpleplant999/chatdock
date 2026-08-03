@@ -126,7 +126,7 @@ You can request a refund within 14 days of purchase if you have used fewer than 
     name: 'Acme Support Bot',
     description: 'Answers questions using the sample Acme product docs.',
     systemPrompt:
-      'You are a helpful support assistant. Answer only using the provided knowledge base. If the answer is not in the knowledge base, say you do not know.',
+      'Answer helpfully and naturally, like a human support agent. Stick to what you know about this product or topic. If you are unsure, say so briefly — do not invent details.',
     published: true,
     createdAt: now,
     updatedAt: now,

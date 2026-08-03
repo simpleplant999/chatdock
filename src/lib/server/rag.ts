@@ -141,7 +141,7 @@ export class RagService {
       return {
         confident: false,
         answer:
-          "I don't have enough information in the knowledge base to answer that.",
+          "I'm not sure about that — I don't have enough info to answer confidently.",
       };
     }
 
@@ -160,7 +160,7 @@ export class RagService {
       return {
         confident: false,
         answer:
-          "I don't have enough information in the knowledge base to answer that.",
+          "I'm not sure about that — I don't have enough info to answer confidently.",
       };
     }
 

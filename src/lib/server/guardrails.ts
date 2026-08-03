@@ -58,20 +58,20 @@ const UNSAFE_CONTEXT_PATTERNS: RegExp[] = [
 ];
 
 const REFUSAL_MESSAGES = {
-  empty: 'Please enter a question so I can look it up in the knowledge base.',
+  empty: 'Go ahead and ask your question whenever you’re ready.',
   too_long: `Your message is too long. Please keep questions under ${MAX_USER_MESSAGE_CHARS} characters.`,
   jailbreak:
-    "I can't change my rules or ignore the knowledge base. Ask a question about the uploaded sources.",
+    "I can’t change how I work, but I’m happy to help with a normal question.",
   unsafe:
-    "I can't help with that request. If you have a question covered by the knowledge base, I'm happy to answer from those sources only.",
+    "I can’t help with that request. If you have another question, I’m happy to try.",
   off_policy:
-    'I only answer questions using the uploaded knowledge base for this chatbot.',
+    "I’m not able to help with that. Try asking something else I can answer.",
   ungrounded:
-    "I don't have enough information in the knowledge base to answer that safely. Please ask something covered by the uploaded sources.",
+    "I’m not sure about that — I don’t have enough info to answer confidently. Want to try another question?",
   unsafe_output:
-    "I can't share that response. Please rephrase your question using the knowledge base topics.",
+    "I can’t share that response. Please try rephrasing your question.",
   unsafe_context:
-    'This content was blocked by safety guardrails and was not added to the knowledge base.',
+    'This content was blocked by safety guardrails and was not added.',
 } as const;
 
 export class GuardrailsService {
@@ -238,7 +238,7 @@ export class GuardrailsService {
   }
 
   private isRefusalAnswer(text: string): boolean {
-    return /don'?t have enough information|can'?t help with that|can'?t change my rules|only answer questions using the uploaded knowledge base|blocked by safety guardrails/i.test(
+    return /don'?t have enough (information|info)|not sure about that|can'?t help with that|can'?t change (my rules|how i work)|blocked by safety guardrails/i.test(
       text,
     );
   }

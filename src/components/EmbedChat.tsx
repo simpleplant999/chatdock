@@ -17,12 +17,14 @@ const THINKING_STEPS = [
 export function EmbedChat({ chatbotId }: { chatbotId: string }) {
   const [botName, setBotName] = useState('Assistant');
   const [session, setSession] = useState<ChatSession | null>(null);
+  const [suggestions, setSuggestions] = useState<string[]>([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
   const [thinkingStep, setThinkingStep] = useState(0);
   const [error, setError] = useState('');
   const listRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -30,13 +32,17 @@ export function EmbedChat({ chatbotId }: { chatbotId: string }) {
       setLoading(true);
       setError('');
       try {
-        const [bot, next] = await Promise.all([
+        const [bot, next, suggestionRes] = await Promise.all([
           api.getPublicBot(chatbotId),
           api.createPublicSession(chatbotId),
+          api
+            .listPublicSuggestions(chatbotId)
+            .catch(() => ({ suggestions: [] as string[] })),
         ]);
         if (!cancelled) {
           setBotName(bot.name);
           setSession(next);
+          setSuggestions(suggestionRes.suggestions);
         }
       } catch (err) {
         if (!cancelled) {
@@ -74,10 +80,9 @@ export function EmbedChat({ chatbotId }: { chatbotId: string }) {
     return () => window.clearInterval(id);
   }, [sending]);
 
-  async function onSend(e: FormEvent) {
-    e.preventDefault();
-    if (!session || !input.trim() || sending) return;
-    const content = input.trim();
+  async function ask(raw: string) {
+    if (!session || !raw.trim() || sending) return;
+    const content = raw.trim();
     setInput('');
     setSending(true);
     setError('');
@@ -119,6 +124,11 @@ export function EmbedChat({ chatbotId }: { chatbotId: string }) {
     } finally {
       setSending(false);
     }
+  }
+
+  function onSend(e: FormEvent) {
+    e.preventDefault();
+    ask(input);
   }
 
   if (loading) {
@@ -194,12 +204,33 @@ export function EmbedChat({ chatbotId }: { chatbotId: string }) {
         )}
       </div>
 
-      <form
-        onSubmit={onSend}
-        className="shrink-0 border-t border-[var(--line)] bg-[var(--paper)]/60 p-2.5"
-      >
-        <div className="flex gap-2">
+      <div className="shrink-0 border-t border-[var(--line)] bg-[var(--paper)]/60 p-2.5">
+        {suggestions.length > 0 && (
+          <div className="mb-2 flex flex-wrap gap-2">
+            {suggestions.map((s) => (
+              <button
+                key={s}
+                type="button"
+                disabled={sending}
+                onClick={() => ask(s)}
+                className="rounded-full border border-[var(--line)] bg-white px-3 py-1 text-[11px] text-[var(--ink-soft)] transition hover:border-[var(--accent)] hover:text-[var(--ink)] disabled:opacity-50"
+              >
+                {s}
+              </button>
+            ))}
+            <button
+              type="button"
+              disabled={sending}
+              onClick={() => inputRef.current?.focus()}
+              className="rounded-full border border-dashed border-[var(--line)] bg-white px-3 py-1 text-[11px] text-[var(--ink-soft)] transition hover:border-[var(--accent)] hover:text-[var(--ink)] disabled:opacity-50"
+            >
+              Other
+            </button>
+          </div>
+        )}
+        <form onSubmit={onSend} className="flex gap-2">
           <input
+            ref={inputRef}
             value={input}
             onChange={(e) => setInput(e.target.value)}
             placeholder="Type your question…"
@@ -213,8 +244,8 @@ export function EmbedChat({ chatbotId }: { chatbotId: string }) {
           >
             Send
           </button>
-        </div>
-      </form>
+        </form>
+      </div>
     </div>
   );
 }

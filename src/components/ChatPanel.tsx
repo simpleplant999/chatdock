@@ -12,12 +12,14 @@ const THINKING_STEPS = [
 
 export function ChatPanel({ chatbotId }: { chatbotId: string }) {
   const [session, setSession] = useState<ChatSession | null>(null);
+  const [suggestions, setSuggestions] = useState<string[]>([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
   const [thinkingStep, setThinkingStep] = useState(0);
   const [error, setError] = useState('');
   const listRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -25,14 +27,20 @@ export function ChatPanel({ chatbotId }: { chatbotId: string }) {
       setLoading(true);
       setError('');
       try {
-        const sessions = await api.listSessions(chatbotId);
+        const [sessions, suggestionRes] = await Promise.all([
+          api.listSessions(chatbotId),
+          api.listSuggestions(chatbotId).catch(() => ({ suggestions: [] })),
+        ]);
         let next: ChatSession;
         if (sessions[0]) {
           next = await api.getSession(chatbotId, sessions[0].id);
         } else {
           next = await api.createSession(chatbotId);
         }
-        if (!cancelled) setSession(next);
+        if (!cancelled) {
+          setSession(next);
+          setSuggestions(suggestionRes.suggestions);
+        }
       } catch (err) {
         if (!cancelled) {
           setError(err instanceof Error ? err.message : 'Failed to start chat');
@@ -68,17 +76,20 @@ export function ChatPanel({ chatbotId }: { chatbotId: string }) {
   async function newChat() {
     setError('');
     try {
-      const next = await api.createSession(chatbotId);
+      const [next, suggestionRes] = await Promise.all([
+        api.createSession(chatbotId),
+        api.listSuggestions(chatbotId).catch(() => ({ suggestions: [] })),
+      ]);
       setSession(next);
+      setSuggestions(suggestionRes.suggestions);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to create session');
     }
   }
 
-  async function onSend(e: FormEvent) {
-    e.preventDefault();
-    if (!session || !input.trim() || sending) return;
-    const content = input.trim();
+  async function ask(raw: string) {
+    if (!session || !raw.trim() || sending) return;
+    const content = raw.trim();
     setInput('');
     setSending(true);
     setError('');
@@ -90,16 +101,13 @@ export function ChatPanel({ chatbotId }: { chatbotId: string }) {
       createdAt: new Date().toISOString(),
     };
     setSession((prev) =>
-      prev
-        ? { ...prev, messages: [...prev.messages, optimistic] }
-        : prev,
+      prev ? { ...prev, messages: [...prev.messages, optimistic] } : prev,
     );
 
     const startedAt = Date.now();
 
     try {
       const result = await api.sendMessage(chatbotId, session.id, content);
-      // Keep the thinking state visible briefly so it doesn't flash away
       const elapsed = Date.now() - startedAt;
       if (elapsed < 1100) {
         await new Promise((resolve) => setTimeout(resolve, 1100 - elapsed));
@@ -119,6 +127,11 @@ export function ChatPanel({ chatbotId }: { chatbotId: string }) {
     } finally {
       setSending(false);
     }
+  }
+
+  function onSend(e: FormEvent) {
+    e.preventDefault();
+    ask(input);
   }
 
   if (loading) {
@@ -200,12 +213,33 @@ export function ChatPanel({ chatbotId }: { chatbotId: string }) {
         )}
       </div>
 
-      <form
-        onSubmit={onSend}
-        className="shrink-0 border-t border-[var(--line)] bg-[var(--paper)]/60 p-2.5"
-      >
-        <div className="flex gap-2">
+      <div className="shrink-0 border-t border-[var(--line)] bg-[var(--paper)]/60 p-2.5">
+        {suggestions.length > 0 && (
+          <div className="mb-2 flex flex-wrap gap-2">
+            {suggestions.map((s) => (
+              <button
+                key={s}
+                type="button"
+                disabled={sending || !session}
+                onClick={() => ask(s)}
+                className="rounded-full border border-[var(--line)] bg-white px-3 py-1 text-[11px] text-[var(--ink-soft)] transition hover:border-[var(--accent)] hover:text-[var(--ink)] disabled:opacity-50"
+              >
+                {s}
+              </button>
+            ))}
+            <button
+              type="button"
+              disabled={sending || !session}
+              onClick={() => inputRef.current?.focus()}
+              className="rounded-full border border-dashed border-[var(--line)] bg-white px-3 py-1 text-[11px] text-[var(--ink-soft)] transition hover:border-[var(--accent)] hover:text-[var(--ink)] disabled:opacity-50"
+            >
+              Other
+            </button>
+          </div>
+        )}
+        <form onSubmit={onSend} className="flex gap-2">
           <input
+            ref={inputRef}
             value={input}
             onChange={(e) => setInput(e.target.value)}
             placeholder="Ask something covered by your sources…"
@@ -219,8 +253,8 @@ export function ChatPanel({ chatbotId }: { chatbotId: string }) {
           >
             {sending ? '…' : 'Send'}
           </button>
-        </div>
-      </form>
+        </form>
+      </div>
     </div>
   );
 }

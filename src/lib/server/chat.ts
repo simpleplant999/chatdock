@@ -86,7 +86,7 @@ export class ChatService {
     return this.createSessionForBot(chatbotId, {
       greeting:
         dto.greeting?.trim() ||
-        'Hi! Ask me anything based on my knowledge base.',
+        'Hi! How can I help you today?',
     });
   }
 
@@ -113,7 +113,7 @@ export class ChatService {
     const messageId = uuid();
     const greeting =
       dto.greeting?.trim() ||
-      'Hi! Ask me anything based on the knowledge I have been given. I only answer from uploaded sources and will refuse unsafe or off-policy requests.';
+      'Hi! How can I help you today?';
 
     const db = await getDb();
     await db.chatSessions.insertOne({
@@ -182,7 +182,7 @@ export class ChatService {
         sessionId,
         role: 'assistant',
         content:
-          'This chatbot has no knowledge sources yet. Please check back later.',
+          'I’m not set up with any info yet. Please check back later.',
         createdAt: new Date().toISOString(),
         sources: [],
         guardrail: { blocked: true, code: 'ungrounded' },

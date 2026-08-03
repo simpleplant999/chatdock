@@ -140,6 +140,10 @@ export const api = {
       body: JSON.stringify(body),
     }),
 
+  listSuggestions: (chatbotId: string) =>
+    request<{ suggestions: string[] }>(
+      `/api/chatbots/${chatbotId}/suggestions`,
+    ),
   listContext: (chatbotId: string) =>
     request<ContextSource[]>(`/api/chatbots/${chatbotId}/context`),
   addContextFile: (chatbotId: string, file: File) => {
@@ -200,6 +204,12 @@ export const api = {
       `/api/public/bots/${id}`,
       { auth: false },
     ),
+  listPublicSuggestions: (chatbotId: string) =>
+    request<{ suggestions: string[] }>(
+      `/api/public/bots/${chatbotId}/suggestions`,
+      { auth: false },
+    ),
+
   createPublicSession: (chatbotId: string) =>
     request<ChatSession>(`/api/public/bots/${chatbotId}/sessions`, {
       method: 'POST',
