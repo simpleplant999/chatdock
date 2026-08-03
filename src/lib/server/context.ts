@@ -82,6 +82,19 @@ export class ContextService {
     });
   }
 
+  async getOne(userId: string, chatbotId: string, sourceId: string) {
+    await chatbotsService.assertOwned(userId, chatbotId);
+    const db = await getDb();
+    const source = await db.contextSources.findOne({
+      _id: sourceId,
+      chatbotId,
+    });
+    if (!source) throw new AppError(404, 'Source not found');
+
+    const dto = await this.toSourceDto(source);
+    return { ...dto, content: source.content };
+  }
+
   async remove(userId: string, chatbotId: string, sourceId: string) {
     await chatbotsService.assertOwned(userId, chatbotId);
     const db = await getDb();

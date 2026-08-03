@@ -77,6 +77,10 @@ export type ContextSource = {
   preview: string;
 };
 
+export type ContextSourceDetail = ContextSource & {
+  content: string;
+};
+
 export type ChatMessage = {
   id: string;
   role: 'user' | 'assistant';
@@ -146,6 +150,10 @@ export const api = {
     ),
   listContext: (chatbotId: string) =>
     request<ContextSource[]>(`/api/chatbots/${chatbotId}/context`),
+  getContextSource: (chatbotId: string, sourceId: string) =>
+    request<ContextSourceDetail>(
+      `/api/chatbots/${chatbotId}/context/${sourceId}`,
+    ),
   addContextFile: (chatbotId: string, file: File) => {
     const form = new FormData();
     form.append('file', file);

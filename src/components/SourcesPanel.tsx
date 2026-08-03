@@ -1,7 +1,8 @@
 'use client';
 
 import { FormEvent, useCallback, useEffect, useState } from 'react';
-import { api, ContextSource } from '@/lib/api';
+import { api, ContextSource, ContextSourceDetail } from '@/lib/api';
+import { ChatMarkdown } from '@/components/ChatMarkdown';
 
 export function SourcesPanel({ chatbotId }: { chatbotId: string }) {
   const [sources, setSources] = useState<ContextSource[]>([]);
@@ -13,6 +14,7 @@ export function SourcesPanel({ chatbotId }: { chatbotId: string }) {
   const [linkName, setLinkName] = useState('');
   const [textName, setTextName] = useState('');
   const [textContent, setTextContent] = useState('');
+  const [previewId, setPreviewId] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -87,6 +89,7 @@ export function SourcesPanel({ chatbotId }: { chatbotId: string }) {
     if (!confirm(`Remove source “${name}”?`)) return;
     try {
       await api.removeContext(chatbotId, sourceId);
+      if (previewId === sourceId) setPreviewId(null);
       await load();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to remove source');
@@ -218,8 +221,12 @@ export function SourcesPanel({ chatbotId }: { chatbotId: string }) {
               className="rounded-xl border border-[var(--line)] bg-[var(--paper)]/70 p-4"
             >
               <div className="flex items-start justify-between gap-3">
-                <div>
-                  <p className="font-medium">{source.name}</p>
+                <button
+                  type="button"
+                  onClick={() => setPreviewId(source.id)}
+                  className="min-w-0 flex-1 rounded-lg text-left transition hover:opacity-90"
+                >
+                  <p className="font-medium text-[var(--ink)]">{source.name}</p>
                   <p className="mt-1 text-xs uppercase tracking-wide text-[var(--ink-soft)]">
                     {source.type}
                     {source.url ? ` · ${source.url}` : ''} · {source.charCount}{' '}
@@ -228,7 +235,10 @@ export function SourcesPanel({ chatbotId }: { chatbotId: string }) {
                   <p className="mt-2 line-clamp-3 text-sm text-[var(--ink-soft)]">
                     {source.preview}
                   </p>
-                </div>
+                  <p className="mt-2 text-xs font-medium text-[var(--accent-deep)]">
+                    Preview →
+                  </p>
+                </button>
                 <button
                   type="button"
                   onClick={() => onRemove(source.id, source.name)}
@@ -241,6 +251,147 @@ export function SourcesPanel({ chatbotId }: { chatbotId: string }) {
           ))}
         </ul>
       </section>
+
+      {previewId && (
+        <KnowledgePreviewModal
+          chatbotId={chatbotId}
+          sourceId={previewId}
+          onClose={() => setPreviewId(null)}
+        />
+      )}
+    </div>
+  );
+}
+
+function KnowledgePreviewModal({
+  chatbotId,
+  sourceId,
+  onClose,
+}: {
+  chatbotId: string;
+  sourceId: string;
+  onClose: () => void;
+}) {
+  const [source, setSource] = useState<ContextSourceDetail | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    let cancelled = false;
+    async function load() {
+      setLoading(true);
+      setError('');
+      try {
+        const data = await api.getContextSource(chatbotId, sourceId);
+        if (!cancelled) setSource(data);
+      } catch (err) {
+        if (!cancelled) {
+          setError(err instanceof Error ? err.message : 'Failed to load source');
+        }
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+    load();
+    return () => {
+      cancelled = true;
+    };
+  }, [chatbotId, sourceId]);
+
+  useEffect(() => {
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    function onKey(e: KeyboardEvent) {
+      if (e.key === 'Escape') onClose();
+    }
+    window.addEventListener('keydown', onKey);
+    return () => {
+      document.body.style.overflow = prev;
+      window.removeEventListener('keydown', onKey);
+    };
+  }, [onClose]);
+
+  const content = source?.content || '';
+  const looksLikeMarkdown =
+    Boolean(content) &&
+    (/^#{1,3}\s/m.test(content) ||
+      /^[-*]\s/m.test(content) ||
+      /^\d+\.\s/m.test(content) ||
+      /\*\*[^*]+\*\*/.test(content) ||
+      Boolean(source?.name.endsWith('.md')));
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-end justify-center bg-[var(--ink)]/45 p-3 sm:items-center sm:p-6"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="kb-preview-title"
+      onClick={onClose}
+    >
+      <div
+        className="flex max-h-[min(860px,92dvh)] w-full max-w-3xl flex-col overflow-hidden rounded-2xl border border-[var(--line)] bg-white shadow-2xl"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex shrink-0 items-start justify-between gap-3 border-b border-[var(--line)] px-5 py-4 sm:px-6">
+          <div className="min-w-0">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--ink-soft)]">
+              Knowledge base
+            </p>
+            <h2
+              id="kb-preview-title"
+              className="mt-1 truncate font-display text-xl text-[var(--ink)] sm:text-2xl"
+            >
+              {source?.name || 'Source preview'}
+            </h2>
+            {source && (
+              <p className="mt-1 text-xs text-[var(--ink-soft)]">
+                {source.type}
+                {source.url ? ` · ${source.url}` : ''} · {source.charCount} chars
+                · {source.chunkCount} chunks
+              </p>
+            )}
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Close preview"
+            className="grid h-9 w-9 shrink-0 place-items-center rounded-lg border border-[var(--line)] text-[var(--ink-soft)] transition hover:bg-[var(--paper)] hover:text-[var(--ink)]"
+          >
+            <svg
+              viewBox="0 0 24 24"
+              width="16"
+              height="16"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.2"
+              strokeLinecap="round"
+              aria-hidden="true"
+            >
+              <path d="M6 6l12 12M18 6L6 18" />
+            </svg>
+          </button>
+        </div>
+
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 py-5 sm:px-6">
+          {loading && (
+            <p className="text-sm text-[var(--ink-soft)]">Loading content…</p>
+          )}
+          {error && (
+            <p className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-[var(--danger)]">
+              {error}
+            </p>
+          )}
+          {!loading && !error && source && (
+            looksLikeMarkdown ? (
+              <ChatMarkdown content={source.content} />
+            ) : (
+              <pre className="whitespace-pre-wrap break-words font-sans text-[13px] leading-relaxed text-[var(--ink)]">
+                {source.content}
+              </pre>
+            )
+          )}
+        </div>
+      </div>
     </div>
   );
 }
