@@ -10,7 +10,7 @@ export async function POST(request: Request) {
       email?: string;
       password?: string;
     };
-
+// test
     const email = (body.email || '').trim();
     const password = body.password || '';
 
