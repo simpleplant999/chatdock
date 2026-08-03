@@ -18,6 +18,7 @@ export function ChatPanel({ chatbotId }: { chatbotId: string }) {
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
+  const [startingNew, setStartingNew] = useState(false);
   const [thinkingStep, setThinkingStep] = useState(0);
   const [error, setError] = useState('');
   const listRef = useRef<HTMLDivElement>(null);
@@ -76,7 +77,10 @@ export function ChatPanel({ chatbotId }: { chatbotId: string }) {
   }, [sending]);
 
   async function newChat() {
+    if (startingNew || sending) return;
     setError('');
+    setStartingNew(true);
+    setInput('');
     try {
       const [next, suggestionRes] = await Promise.all([
         api.createSession(chatbotId),
@@ -86,6 +90,8 @@ export function ChatPanel({ chatbotId }: { chatbotId: string }) {
       setSuggestions(suggestionRes.suggestions);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to create session');
+    } finally {
+      setStartingNew(false);
     }
   }
 
@@ -156,16 +162,38 @@ export function ChatPanel({ chatbotId }: { chatbotId: string }) {
         <button
           type="button"
           onClick={newChat}
-          className="rounded-lg border border-[var(--line)] px-2.5 py-1 text-xs text-[var(--ink-soft)] transition hover:bg-[var(--paper)] hover:text-[var(--ink)]"
+          disabled={startingNew || sending}
+          className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--line)] px-2.5 py-1 text-xs text-[var(--ink-soft)] transition hover:bg-[var(--paper)] hover:text-[var(--ink)] disabled:cursor-wait disabled:opacity-60"
         >
-          New chat
+          {startingNew ? (
+            <>
+              <span
+                className="h-3 w-3 animate-spin rounded-full border border-[var(--line)] border-t-[var(--accent)]"
+                aria-hidden
+              />
+              Starting…
+            </>
+          ) : (
+            'New chat'
+          )}
         </button>
       </div>
 
       <div
         ref={listRef}
-        className="min-h-0 flex-1 space-y-2.5 overflow-y-auto overscroll-contain px-3 py-3"
+        className="relative min-h-0 flex-1 space-y-2.5 overflow-y-auto overscroll-contain px-3 py-3"
       >
+        {startingNew && (
+          <div className="absolute inset-0 z-10 flex items-center justify-center bg-white/80 backdrop-blur-[1px]">
+            <div className="flex items-center gap-2.5 rounded-xl border border-[var(--line)] bg-white px-4 py-3 text-sm text-[var(--ink-soft)] shadow-sm">
+              <span
+                className="h-4 w-4 animate-spin rounded-full border-2 border-[var(--line)] border-t-[var(--accent)]"
+                aria-hidden
+              />
+              Starting new chat…
+            </div>
+          </div>
+        )}
         {error && (
           <p className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-xs text-[var(--danger)]">
             {error}
@@ -226,7 +254,7 @@ export function ChatPanel({ chatbotId }: { chatbotId: string }) {
               <button
                 key={s}
                 type="button"
-                disabled={sending || !session}
+                disabled={sending || startingNew || !session}
                 onClick={() => ask(s)}
                 className="rounded-full border border-[var(--line)] bg-white px-3 py-1 text-[11px] text-[var(--ink-soft)] transition hover:border-[var(--accent)] hover:text-[var(--ink)] disabled:opacity-50"
               >
@@ -235,7 +263,7 @@ export function ChatPanel({ chatbotId }: { chatbotId: string }) {
             ))}
             <button
               type="button"
-              disabled={sending || !session}
+              disabled={sending || startingNew || !session}
               onClick={() => inputRef.current?.focus()}
               className="rounded-full border border-dashed border-[var(--line)] bg-white px-3 py-1 text-[11px] text-[var(--ink-soft)] transition hover:border-[var(--accent)] hover:text-[var(--ink)] disabled:opacity-50"
             >
@@ -250,11 +278,11 @@ export function ChatPanel({ chatbotId }: { chatbotId: string }) {
             onChange={(e) => setInput(e.target.value)}
             placeholder="Ask something covered by your sources…"
             className="min-w-0 flex-1 rounded-full border border-[var(--line)] bg-white px-3.5 py-2 text-[13px] outline-none ring-[var(--accent)] transition focus:ring-2"
-            disabled={sending || !session}
+            disabled={sending || startingNew || !session}
           />
           <button
             type="submit"
-            disabled={sending || !input.trim() || !session}
+            disabled={sending || startingNew || !input.trim() || !session}
             className="shrink-0 rounded-full bg-[var(--accent)] px-3.5 py-2 text-[13px] font-semibold text-white transition hover:bg-[var(--accent-deep)] disabled:opacity-50"
           >
             {sending ? '…' : 'Send'}
