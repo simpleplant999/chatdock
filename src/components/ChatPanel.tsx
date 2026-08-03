@@ -143,11 +143,7 @@ export function ChatPanel({ chatbotId }: { chatbotId: string }) {
   }
 
   if (loading) {
-    return (
-      <div className="flex h-full min-h-0 items-center justify-center rounded-2xl border border-[var(--line)] bg-white p-6 text-sm text-[var(--ink-soft)]">
-        Starting chat session…
-      </div>
-    );
+    return <ChatSkeleton />;
   }
 
   return (
@@ -166,16 +162,12 @@ export function ChatPanel({ chatbotId }: { chatbotId: string }) {
           className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--line)] px-2.5 py-1 text-xs text-[var(--ink-soft)] transition hover:bg-[var(--paper)] hover:text-[var(--ink)] disabled:cursor-wait disabled:opacity-60"
         >
           {startingNew ? (
-            <>
-              <span
-                className="h-3 w-3 animate-spin rounded-full border border-[var(--line)] border-t-[var(--accent)]"
-                aria-hidden
-              />
-              Starting…
-            </>
-          ) : (
-            'New chat'
-          )}
+            <span
+              className="h-3 w-3 animate-spin rounded-full border border-[var(--line)] border-t-[var(--accent)]"
+              aria-hidden
+            />
+          ) : null}
+          New chat
         </button>
       </div>
 
@@ -183,67 +175,62 @@ export function ChatPanel({ chatbotId }: { chatbotId: string }) {
         ref={listRef}
         className="relative min-h-0 flex-1 space-y-2.5 overflow-y-auto overscroll-contain px-3 py-3"
       >
-        {startingNew && (
-          <div className="absolute inset-0 z-10 flex items-center justify-center bg-white/80 backdrop-blur-[1px]">
-            <div className="flex items-center gap-2.5 rounded-xl border border-[var(--line)] bg-white px-4 py-3 text-sm text-[var(--ink-soft)] shadow-sm">
-              <span
-                className="h-4 w-4 animate-spin rounded-full border-2 border-[var(--line)] border-t-[var(--accent)]"
-                aria-hidden
-              />
-              Starting new chat…
-            </div>
-          </div>
-        )}
-        {error && (
-          <p className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-xs text-[var(--danger)]">
-            {error}
-          </p>
-        )}
-        {session?.messages.map((message) => (
-          <div
-            key={message.id}
-            className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
-          >
-            <div
-              className={`rounded-2xl px-3 py-2 text-[13px] leading-snug ${
-                message.role === 'user'
-                  ? 'max-w-[75%] rounded-br-md bg-[var(--ink)] text-white'
-                  : message.guardrail?.blocked
-                    ? 'max-w-[90%] rounded-bl-md border border-amber-200 bg-amber-50 text-[var(--ink)]'
-                    : 'max-w-[90%] rounded-bl-md bg-[var(--paper-2)] text-[var(--ink)]'
-              }`}
-            >
-              {message.role === 'assistant' && message.guardrail?.blocked && (
-                <p className="mb-1 text-[10px] font-semibold uppercase tracking-wide text-[var(--warn)]">
-                  Guardrail · {message.guardrail.code || 'blocked'}
-                </p>
-              )}
-              {message.role === 'assistant' ? (
-                <ChatMarkdown content={message.content} />
-              ) : (
-                <p className="whitespace-pre-wrap">{message.content}</p>
-              )}
-            </div>
-          </div>
-        ))}
-        {sending && (
-          <div className="flex justify-start">
-            <div className="max-w-[75%] rounded-2xl rounded-bl-md border border-[var(--line)] bg-[var(--paper-2)] px-3 py-2 text-[13px] text-[var(--ink-soft)]">
-              <div className="flex items-center gap-2.5">
-                <span className="thinking-dots" aria-hidden="true">
-                  <span />
-                  <span />
-                  <span />
-                </span>
-                <div>
-                  <p className="text-[13px] font-medium text-[var(--ink)]">
-                    Thinking
-                  </p>
-                  <p className="text-[11px]">{THINKING_STEPS[thinkingStep]}</p>
+        {startingNew ? (
+          <ChatMessageSkeleton />
+        ) : (
+          <>
+            {error && (
+              <p className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-xs text-[var(--danger)]">
+                {error}
+              </p>
+            )}
+            {session?.messages.map((message) => (
+              <div
+                key={message.id}
+                className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
+              >
+                <div
+                  className={`rounded-2xl px-3 py-2 text-[13px] leading-snug ${
+                    message.role === 'user'
+                      ? 'max-w-[75%] rounded-br-md bg-[var(--ink)] text-white'
+                      : message.guardrail?.blocked
+                        ? 'max-w-[90%] rounded-bl-md border border-amber-200 bg-amber-50 text-[var(--ink)]'
+                        : 'max-w-[90%] rounded-bl-md bg-[var(--paper-2)] text-[var(--ink)]'
+                  }`}
+                >
+                  {message.role === 'assistant' && message.guardrail?.blocked && (
+                    <p className="mb-1 text-[10px] font-semibold uppercase tracking-wide text-[var(--warn)]">
+                      Guardrail · {message.guardrail.code || 'blocked'}
+                    </p>
+                  )}
+                  {message.role === 'assistant' ? (
+                    <ChatMarkdown content={message.content} />
+                  ) : (
+                    <p className="whitespace-pre-wrap">{message.content}</p>
+                  )}
                 </div>
               </div>
-            </div>
-          </div>
+            ))}
+            {sending && (
+              <div className="flex justify-start">
+                <div className="max-w-[75%] rounded-2xl rounded-bl-md border border-[var(--line)] bg-[var(--paper-2)] px-3 py-2 text-[13px] text-[var(--ink-soft)]">
+                  <div className="flex items-center gap-2.5">
+                    <span className="thinking-dots" aria-hidden="true">
+                      <span />
+                      <span />
+                      <span />
+                    </span>
+                    <div>
+                      <p className="text-[13px] font-medium text-[var(--ink)]">
+                        Thinking
+                      </p>
+                      <p className="text-[11px]">{THINKING_STEPS[thinkingStep]}</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+          </>
         )}
       </div>
 
@@ -288,6 +275,72 @@ export function ChatPanel({ chatbotId }: { chatbotId: string }) {
             {sending ? '…' : 'Send'}
           </button>
         </form>
+      </div>
+    </div>
+  );
+}
+
+function SkeletonBar({ className }: { className?: string }) {
+  return (
+    <div
+      className={`animate-pulse rounded-md bg-[var(--paper-2)] ${className || ''}`}
+    />
+  );
+}
+
+function ChatMessageSkeleton() {
+  return (
+    <div className="space-y-3" aria-hidden>
+      <div className="flex justify-start">
+        <div className="w-[78%] space-y-2 rounded-2xl rounded-bl-md bg-[var(--paper-2)]/80 p-3">
+          <SkeletonBar className="h-3 w-[92%]" />
+          <SkeletonBar className="h-3 w-[70%]" />
+          <SkeletonBar className="h-3 w-[84%]" />
+        </div>
+      </div>
+      <div className="flex justify-end">
+        <div className="w-[55%] space-y-2 rounded-2xl rounded-br-md bg-[var(--paper-2)] p-3">
+          <SkeletonBar className="h-3 w-full" />
+          <SkeletonBar className="h-3 w-[60%]" />
+        </div>
+      </div>
+      <div className="flex justify-start">
+        <div className="w-[68%] space-y-2 rounded-2xl rounded-bl-md bg-[var(--paper-2)]/80 p-3">
+          <SkeletonBar className="h-3 w-[88%]" />
+          <SkeletonBar className="h-3 w-[52%]" />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ChatSkeleton() {
+  return (
+    <div
+      className="mx-auto flex h-full min-h-0 w-full max-w-xl flex-col overflow-hidden rounded-2xl border border-[var(--line)] bg-white shadow-sm"
+      aria-busy="true"
+      aria-label="Loading chat"
+    >
+      <div className="flex shrink-0 items-center justify-between border-b border-[var(--line)] px-3 py-2.5">
+        <div className="space-y-1.5">
+          <SkeletonBar className="h-4 w-24" />
+          <SkeletonBar className="h-3 w-40" />
+        </div>
+        <SkeletonBar className="h-7 w-16 rounded-lg" />
+      </div>
+      <div className="min-h-0 flex-1 overflow-hidden px-3 py-3">
+        <ChatMessageSkeleton />
+      </div>
+      <div className="shrink-0 border-t border-[var(--line)] bg-[var(--paper)]/60 p-2.5">
+        <div className="mb-2 flex gap-2">
+          <SkeletonBar className="h-7 w-24 rounded-full" />
+          <SkeletonBar className="h-7 w-20 rounded-full" />
+          <SkeletonBar className="h-7 w-16 rounded-full" />
+        </div>
+        <div className="flex gap-2">
+          <SkeletonBar className="h-9 min-w-0 flex-1 rounded-full" />
+          <SkeletonBar className="h-9 w-14 shrink-0 rounded-full" />
+        </div>
       </div>
     </div>
   );
