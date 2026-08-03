@@ -1,4 +1,4 @@
-# ContextChat frontend
+# ChatDock frontend
 
 Single deployable Next.js app (UI + API routes). The NestJS `backend/` folder is obsolete.
 

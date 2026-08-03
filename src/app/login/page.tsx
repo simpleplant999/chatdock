@@ -34,7 +34,7 @@ export default function LoginPage() {
   return (
     <div className="grid min-h-screen place-items-center px-4">
       <div className="w-full max-w-md rounded-2xl border border-[var(--line)] bg-white/90 p-6 shadow-sm sm:p-8">
-        <p className="font-display text-3xl text-[var(--ink)]">ContextChat</p>
+        <p className="font-display text-3xl text-[var(--ink)]">ChatDock</p>
         <h1 className="mt-2 text-lg font-semibold">Log in</h1>
         <p className="mt-1 text-sm text-[var(--ink-soft)]">
           Demo account: demo@example.com / password123 ·{' '}

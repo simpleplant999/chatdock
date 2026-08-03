@@ -57,7 +57,7 @@ export function AppShell({
             CC
           </span>
           <div>
-            <p className="font-display text-lg leading-none">ContextChat</p>
+            <p className="font-display text-lg leading-none">ChatDock</p>
             <p className="mt-1 text-[11px] text-white/55">Admin dashboard</p>
           </div>
         </Link>

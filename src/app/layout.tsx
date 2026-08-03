@@ -3,7 +3,7 @@ import { AuthProvider } from '@/lib/auth';
 import './globals.css';
 
 export const metadata: Metadata = {
-  title: 'ContextChat — Chatbots from your docs',
+  title: 'ChatDock — Chatbots from your docs',
   description:
     'Upload docs and links, then chat with an agent that answers only from your context. Embed a bubble on any website.',
 };

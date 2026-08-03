@@ -30,7 +30,7 @@ export function EmbedPanel({
   const snippet = useMemo(
     () =>
       [
-        `<!-- ContextChat bubble — new session on every page load -->`,
+        `<!-- ChatDock bubble — new session on every page load -->`,
         `<script`,
         `  src="${widgetSrc}"`,
         `  data-bot-id="${bot.id}"`,

@@ -1,5 +1,5 @@
 /**
- * ContextChat embed widget — floating bubble (bottom-right).
+ * ChatDock embed widget — floating bubble (bottom-right).
  *
  * Usage:
  *   <script
@@ -17,13 +17,13 @@
     document.currentScript ||
     document.querySelector('script[src*="embed-widget.js"][data-bot-id]');
   if (!script) {
-    console.error('[ContextChat] Could not find embed-widget.js script tag');
+    console.error('[ChatDock] Could not find embed-widget.js script tag');
     return;
   }
 
   var botId = script.getAttribute('data-bot-id');
   if (!botId) {
-    console.error('[ContextChat] Missing data-bot-id on embed-widget.js');
+    console.error('[ChatDock] Missing data-bot-id on embed-widget.js');
     return;
   }
 

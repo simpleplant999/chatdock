@@ -7,7 +7,7 @@ import { LandingDemo } from '@/components/LandingDemo';
 const FEATURES = [
   {
     title: 'Upload your knowledge',
-    body: 'Add PDFs, docs, links, and plain text. ContextChat indexes them into a private knowledge base for each bot.',
+    body: 'Add PDFs, docs, links, and plain text. ChatDock indexes them into a private knowledge base for each bot.',
   },
   {
     title: 'Answers from your sources only',
@@ -37,7 +37,7 @@ export function LandingPage() {
               CC
             </span>
             <span className="font-display text-xl tracking-tight text-white">
-              ContextChat
+              ChatDock
             </span>
           </Link>
           <nav className="flex items-center gap-2 sm:gap-3">
@@ -102,7 +102,7 @@ export function LandingPage() {
         <div className="mx-auto flex min-h-dvh max-w-6xl flex-col justify-center px-5 pb-16 pt-28 sm:px-8 sm:pb-24 sm:pt-32">
           <div className="max-w-2xl landing-rise">
             <p className="font-display text-5xl tracking-tight text-white sm:text-6xl md:text-7xl">
-              ContextChat
+              ChatDock
             </p>
             <h1 className="mt-5 max-w-xl text-balance text-xl font-medium leading-snug text-white/90 sm:text-2xl">
               Chatbots that answer only from your docs.
@@ -223,7 +223,7 @@ export function LandingPage() {
             <span className="grid h-8 w-8 place-items-center rounded-lg bg-[var(--accent)] text-xs font-semibold text-white">
               CC
             </span>
-            <span className="font-display text-lg">ContextChat</span>
+            <span className="font-display text-lg">ChatDock</span>
           </div>
           <p className="text-sm text-[var(--ink-soft)]">
             Knowledge bots for your docs and website.

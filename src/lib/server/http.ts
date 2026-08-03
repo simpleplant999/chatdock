@@ -12,8 +12,19 @@ export function errorResponse(err: unknown) {
   }
 
   console.error(err);
+
+  const message = err instanceof Error ? err.message : String(err);
+  const isMongo =
+    /mongo|ENOTFOUND|ECONNREFUSED|authentication failed|whitelist|IP/i.test(
+      message,
+    );
+
   return NextResponse.json(
-    { message: 'Internal server error' },
+    {
+      message: isMongo
+        ? `Database connection failed: ${message}`
+        : 'Internal server error',
+    },
     { status: 500 },
   );
 }

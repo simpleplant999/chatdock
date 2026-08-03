@@ -199,19 +199,27 @@ function collections(db: Db): Collections {
 }
 
 async function connect(): Promise<Collections> {
-  const uri =
-    process.env.MONGODB_URI?.trim() ||
-    'mongodb://127.0.0.1:27017/contextchat';
+  const uri = process.env.MONGODB_URI?.trim();
+  if (!uri) {
+    if (process.env.VERCEL || process.env.NODE_ENV === 'production') {
+      throw new Error(
+        'MONGODB_URI is not set. Add it in Vercel → Project Settings → Environment Variables.',
+      );
+    }
+  }
+  const connectionUri = uri || 'mongodb://127.0.0.1:27017/contextchat';
 
   if (!globalForMongo.__contextchatMongo) {
-    const client = new MongoClient(uri);
+    const client = new MongoClient(connectionUri);
     const ready = (async () => {
       await client.connect();
       const db = client.db();
       const cols = collections(db);
       await ensureIndexes(cols);
       await seedIfEmpty(cols);
-      console.log(`MongoDB ready (${uri.replace(/\/\/.*@/, '//***@')})`);
+      console.log(
+        `MongoDB ready (${connectionUri.replace(/\/\/.*@/, '//***@')})`,
+      );
     })().catch((err) => {
       delete globalForMongo.__contextchatMongo;
       throw err;
