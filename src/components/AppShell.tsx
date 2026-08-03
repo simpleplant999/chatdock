@@ -1,17 +1,22 @@
 'use client';
 
-import { useState } from 'react';
+import { Suspense, useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
-import { usePathname, useRouter } from 'next/navigation';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/lib/auth';
+import { api, Chatbot } from '@/lib/api';
 
-export type SideNavItem = {
+export type BotSection = 'playground' | 'sources' | 'files' | 'embed';
+
+const BOT_SECTIONS: {
+  id: BotSection;
   label: string;
-  href?: string;
-  active?: boolean;
-  onClick?: () => void;
-  badge?: string | number;
-};
+}[] = [
+  { id: 'playground', label: 'Playground' },
+  { id: 'sources', label: 'Sources' },
+  { id: 'files', label: 'Files' },
+  { id: 'embed', label: 'Embed' },
+];
 
 export function AppShell({
   children,
@@ -19,125 +24,23 @@ export function AppShell({
   subtitle,
   actions,
   fullHeight = false,
-  sideNavItems,
 }: {
   children: React.ReactNode;
   title?: string;
   subtitle?: string;
   actions?: React.ReactNode;
   fullHeight?: boolean;
-  sideNavItems?: SideNavItem[];
 }) {
-  const pathname = usePathname();
-  const router = useRouter();
-  const { user, logout } = useAuth();
   const [mobileOpen, setMobileOpen] = useState(false);
-
-  function onLogout() {
-    logout();
-    router.replace('/login');
-  }
-
-  const isChatbots = pathname === '/app';
-  const onChatbotDetail = pathname.startsWith('/chatbots/');
 
   function closeMobile() {
     setMobileOpen(false);
   }
 
   const sidebar = (
-    <aside className="flex h-full w-[260px] flex-col border-r border-[var(--line)] bg-[var(--ink)] text-white">
-      <div className="flex items-center gap-3 border-b border-white/10 px-5 py-5">
-        <Link
-          href="/app"
-          onClick={closeMobile}
-          className="flex items-center gap-3"
-        >
-          <span className="grid h-9 w-9 place-items-center rounded-lg bg-[var(--accent)] text-sm font-semibold">
-            CC
-          </span>
-          <div>
-            <p className="font-display text-lg leading-none">ChatDock</p>
-            <p className="mt-1 text-[11px] text-white/55">Admin dashboard</p>
-          </div>
-        </Link>
-      </div>
-
-      <nav className="flex-1 space-y-1 overflow-y-auto px-3 py-4">
-        <p className="mb-2 px-3 text-[10px] font-semibold uppercase tracking-[0.14em] text-white/40">
-          Workspace
-        </p>
-        <SideLink
-          href="/app"
-          label="Chatbots"
-          active={isChatbots}
-          onNavigate={closeMobile}
-        />
-
-        {onChatbotDetail && sideNavItems && sideNavItems.length > 0 && (
-          <>
-            <p className="mb-2 mt-6 px-3 text-[10px] font-semibold uppercase tracking-[0.14em] text-white/40">
-              Current bot
-            </p>
-            {sideNavItems.map((item) =>
-              item.href ? (
-                <SideLink
-                  key={item.label}
-                  href={item.href}
-                  label={item.label}
-                  active={item.active}
-                  badge={item.badge}
-                  onNavigate={closeMobile}
-                />
-              ) : (
-                <button
-                  key={item.label}
-                  type="button"
-                  onClick={() => {
-                    item.onClick?.();
-                    closeMobile();
-                  }}
-                  className={`flex w-full items-center justify-between rounded-lg px-3 py-2.5 text-left text-sm transition ${
-                    item.active
-                      ? 'bg-white/12 text-white'
-                      : 'text-white/70 hover:bg-white/8 hover:text-white'
-                  }`}
-                >
-                  <span>{item.label}</span>
-                  {item.badge !== undefined && (
-                    <span className="rounded-md bg-white/10 px-1.5 py-0.5 text-[11px] text-white/70">
-                      {item.badge}
-                    </span>
-                  )}
-                </button>
-              ),
-            )}
-            <Link
-              href="/app"
-              onClick={closeMobile}
-              className="mt-1 flex w-full items-center rounded-lg px-3 py-2.5 text-sm text-white/55 transition hover:bg-white/8 hover:text-white"
-            >
-              ← All chatbots
-            </Link>
-          </>
-        )}
-      </nav>
-
-      <div className="border-t border-white/10 px-4 py-4">
-        {user && (
-          <div className="mb-3 truncate px-1 text-xs text-white/55">
-            {user.email}
-          </div>
-        )}
-        <button
-          type="button"
-          onClick={onLogout}
-          className="w-full rounded-lg border border-white/15 px-3 py-2 text-sm text-white/80 transition hover:bg-white/10 hover:text-white"
-        >
-          Log out
-        </button>
-      </div>
-    </aside>
+    <Suspense fallback={<SidebarChrome loading />}>
+      <SidebarNav onNavigate={closeMobile} />
+    </Suspense>
   );
 
   return (
@@ -208,6 +111,214 @@ export function AppShell({
   );
 }
 
+function SidebarChrome({
+  loading,
+  children,
+}: {
+  loading?: boolean;
+  children?: React.ReactNode;
+}) {
+  const router = useRouter();
+  const { user, logout } = useAuth();
+
+  function onLogout() {
+    logout();
+    router.replace('/login');
+  }
+
+  return (
+    <aside className="flex h-full w-[260px] flex-col border-r border-[var(--line)] bg-[var(--ink)] text-white">
+      <div className="flex items-center gap-3 border-b border-white/10 px-5 py-5">
+        <Link href="/app" className="flex items-center gap-3">
+          <span className="grid h-9 w-9 place-items-center rounded-lg bg-[var(--accent)] text-sm font-semibold">
+            CC
+          </span>
+          <div>
+            <p className="font-display text-lg leading-none">ChatDock</p>
+            <p className="mt-1 text-[11px] text-white/55">Admin dashboard</p>
+          </div>
+        </Link>
+      </div>
+
+      {loading ? (
+        <div className="flex-1 px-3 py-4 text-xs text-white/40">Loading…</div>
+      ) : (
+        children
+      )}
+
+      <div className="border-t border-white/10 px-4 py-4">
+        {user && (
+          <div className="mb-3 truncate px-1 text-xs text-white/55">
+            {user.email}
+          </div>
+        )}
+        <button
+          type="button"
+          onClick={onLogout}
+          className="w-full rounded-lg border border-white/15 px-3 py-2 text-sm text-white/80 transition hover:bg-white/10 hover:text-white"
+        >
+          Log out
+        </button>
+      </div>
+    </aside>
+  );
+}
+
+function SidebarNav({ onNavigate }: { onNavigate: () => void }) {
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const { user } = useAuth();
+  const [bots, setBots] = useState<Chatbot[]>([]);
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+
+  const activeBotId = pathname.startsWith('/chatbots/')
+    ? pathname.split('/')[2] || null
+    : null;
+  const activeSection = (searchParams.get('section') as BotSection) || 'playground';
+  const isDashboard = pathname === '/app';
+
+  const loadBots = useCallback(async () => {
+    if (!user) {
+      setBots([]);
+      return;
+    }
+    try {
+      setBots(await api.listChatbots());
+    } catch {
+      // Keep previous list on transient errors
+    }
+  }, [user]);
+
+  useEffect(() => {
+    loadBots();
+  }, [loadBots, pathname]);
+
+  useEffect(() => {
+    function onChanged() {
+      loadBots();
+    }
+    window.addEventListener('chatdock:chatbots-changed', onChanged);
+    return () => {
+      window.removeEventListener('chatdock:chatbots-changed', onChanged);
+    };
+  }, [loadBots]);
+
+  useEffect(() => {
+    if (activeBotId) setExpandedId(activeBotId);
+  }, [activeBotId]);
+
+  function toggleBot(botId: string) {
+    setExpandedId((prev) => (prev === botId ? null : botId));
+  }
+
+  return (
+    <SidebarChrome>
+      <nav className="flex-1 space-y-1 overflow-y-auto px-3 py-4">
+        <p className="mb-2 px-3 text-[10px] font-semibold uppercase tracking-[0.14em] text-white/40">
+          Workspace
+        </p>
+        <SideLink
+          href="/app"
+          label="Dashboard"
+          active={isDashboard}
+          onNavigate={onNavigate}
+        />
+
+        <p className="mb-2 mt-6 px-3 text-[10px] font-semibold uppercase tracking-[0.14em] text-white/40">
+          Chatbots
+        </p>
+
+        {bots.length === 0 && (
+          <p className="px-3 py-2 text-xs text-white/40">
+            No chatbots yet. Create one from Dashboard.
+          </p>
+        )}
+
+        <ul className="space-y-1">
+          {bots.map((bot) => {
+            const open = expandedId === bot.id;
+            const isActiveBot = activeBotId === bot.id;
+
+            return (
+              <li key={bot.id}>
+                <button
+                  type="button"
+                  onClick={() => toggleBot(bot.id)}
+                  className={`flex w-full items-center gap-2 rounded-lg px-3 py-2.5 text-left text-sm transition ${
+                    isActiveBot
+                      ? 'bg-white/12 text-white'
+                      : 'text-white/70 hover:bg-white/8 hover:text-white'
+                  }`}
+                  aria-expanded={open}
+                >
+                  <span
+                    className={`grid h-4 w-4 shrink-0 place-items-center text-[10px] text-white/50 transition ${
+                      open ? 'rotate-90' : ''
+                    }`}
+                    aria-hidden
+                  >
+                    ▸
+                  </span>
+                  <span className="min-w-0 flex-1 truncate font-medium">
+                    {bot.name}
+                  </span>
+                  {bot.published && (
+                    <span className="shrink-0 rounded-md bg-emerald-500/20 px-1.5 py-0.5 text-[10px] font-medium text-emerald-200">
+                      Live
+                    </span>
+                  )}
+                </button>
+
+                {open && (
+                  <ul className="mb-1 ml-3 space-y-0.5 border-l border-white/10 pl-2 pt-0.5">
+                    {BOT_SECTIONS.map((section) => {
+                      const href = `/chatbots/${bot.id}?section=${section.id}`;
+                      const active =
+                        isActiveBot &&
+                        (activeSection === section.id ||
+                          (section.id === 'playground' &&
+                            !searchParams.get('section')));
+                      const badge =
+                        section.id === 'sources'
+                          ? bot.sourceCount
+                          : section.id === 'embed'
+                            ? bot.published
+                              ? 'On'
+                              : 'Off'
+                            : undefined;
+
+                      return (
+                        <li key={section.id}>
+                          <Link
+                            href={href}
+                            onClick={onNavigate}
+                            className={`flex items-center justify-between rounded-md px-2.5 py-2 text-[13px] transition ${
+                              active
+                                ? 'bg-white/12 text-white'
+                                : 'text-white/60 hover:bg-white/8 hover:text-white'
+                            }`}
+                          >
+                            <span>{section.label}</span>
+                            {badge !== undefined && (
+                              <span className="rounded-md bg-white/10 px-1.5 py-0.5 text-[10px] text-white/65">
+                                {badge}
+                              </span>
+                            )}
+                          </Link>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                )}
+              </li>
+            );
+          })}
+        </ul>
+      </nav>
+    </SidebarChrome>
+  );
+}
+
 function SideLink({
   href,
   label,
@@ -239,4 +350,11 @@ function SideLink({
       )}
     </Link>
   );
+}
+
+/** Notify the sidebar to refresh its chatbot list. */
+export function notifyChatbotsChanged() {
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new Event('chatdock:chatbots-changed'));
+  }
 }

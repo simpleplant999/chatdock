@@ -1,6 +1,7 @@
 'use client';
 
 import { FormEvent, useCallback, useEffect, useState } from 'react';
+import { notifyChatbotsChanged } from '@/components/AppShell';
 import { api, ContextSource, ContextSourceDetail } from '@/lib/api';
 import { ChatMarkdown } from '@/components/ChatMarkdown';
 
@@ -45,6 +46,7 @@ export function SourcesPanel({ chatbotId }: { chatbotId: string }) {
       await api.addContextFile(chatbotId, file);
       form.reset();
       await load();
+      notifyChatbotsChanged();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Upload failed');
     } finally {
@@ -62,6 +64,7 @@ export function SourcesPanel({ chatbotId }: { chatbotId: string }) {
       setUrl('');
       setLinkName('');
       await load();
+      notifyChatbotsChanged();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to add link');
     } finally {
@@ -79,6 +82,7 @@ export function SourcesPanel({ chatbotId }: { chatbotId: string }) {
       setTextName('');
       setTextContent('');
       await load();
+      notifyChatbotsChanged();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to add text');
     } finally {
@@ -95,6 +99,7 @@ export function SourcesPanel({ chatbotId }: { chatbotId: string }) {
       await api.feedLivingKnowledge(chatbotId, feedContent.trim());
       setFeedContent('');
       await load();
+      notifyChatbotsChanged();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to save knowledge');
     } finally {
@@ -108,6 +113,7 @@ export function SourcesPanel({ chatbotId }: { chatbotId: string }) {
       await api.removeContext(chatbotId, sourceId);
       if (previewId === sourceId) setPreviewId(null);
       await load();
+      notifyChatbotsChanged();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to remove source');
     }

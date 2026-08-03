@@ -2,7 +2,7 @@
 
 import { FormEvent, useEffect, useState } from 'react';
 import Link from 'next/link';
-import { AppShell } from '@/components/AppShell';
+import { AppShell, notifyChatbotsChanged } from '@/components/AppShell';
 import { RequireAuth } from '@/components/RequireAuth';
 import { api, Chatbot } from '@/lib/api';
 
@@ -51,6 +51,7 @@ function DashboardContent() {
       setName('');
       setDescription('');
       await load();
+      notifyChatbotsChanged();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to create chatbot');
     } finally {
@@ -65,6 +66,7 @@ function DashboardContent() {
     try {
       await api.deleteChatbot(id);
       await load();
+      notifyChatbotsChanged();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to delete chatbot');
     }
@@ -72,8 +74,8 @@ function DashboardContent() {
 
   return (
     <AppShell
-      title="Chatbots"
-      subtitle="Manage knowledge bots, sources, and playground chats."
+      title="Dashboard"
+      subtitle="Manage knowledge bots, sources, files, and playground chats."
     >
       <div className="mb-6 grid gap-3 sm:grid-cols-3">
         <StatCard label="Total bots" value={loading ? '—' : String(bots.length)} />
@@ -130,7 +132,7 @@ function DashboardContent() {
                 >
                   <div className="min-w-0">
                     <Link
-                      href={`/chatbots/${bot.id}`}
+                      href={`/chatbots/${bot.id}?section=playground`}
                       className="font-display text-lg text-[var(--ink)] transition hover:text-[var(--accent)]"
                     >
                       {bot.name}
@@ -145,7 +147,7 @@ function DashboardContent() {
                   </div>
                   <div className="flex shrink-0 gap-2">
                     <Link
-                      href={`/chatbots/${bot.id}`}
+                      href={`/chatbots/${bot.id}?section=playground`}
                       className="rounded-lg bg-[var(--accent)] px-3 py-1.5 text-sm font-medium text-white transition hover:bg-[var(--accent-deep)]"
                     >
                       Manage
