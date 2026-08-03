@@ -1,36 +1,31 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# ContextChat frontend
 
-## Getting Started
+Single deployable Next.js app (UI + API routes). The NestJS `backend/` folder is obsolete.
 
-First, run the development server:
+## Getting started
 
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+**Demo login:** `demo@example.com` / `password123`
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Environment
 
-## Learn More
+Copy `.env.example` to `.env.local` if you want custom values:
 
-To learn more about Next.js, take a look at the following resources:
+- `JWT_SECRET` — optional; defaults to a local dev secret
+- `MONGODB_URI` — MongoDB connection string (Atlas or local). Defaults to `mongodb://127.0.0.1:27017/contextchat`
+- `GROQ_API_KEY` — optional; enables Groq LLM answers
+- `NEXT_PUBLIC_API_URL` — leave empty so the browser calls same-origin `/api/*`
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+On first connect with an empty database, a demo user is seeded: `demo@example.com` / `password123`.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Scripts
 
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- `npm run dev` — development server
+- `npm run build` — production build
+- `npm run start` — run production server
