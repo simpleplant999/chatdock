@@ -3,6 +3,7 @@ import { AppError } from '@/lib/server/errors';
 import { errorResponse, json, requireUser } from '@/lib/server/http';
 
 export const runtime = 'nodejs';
+export const maxDuration = 30;
 
 type Params = { params: Promise<{ id: string }> };
 

@@ -9,7 +9,7 @@ const FRAME_ANCESTORS =
   "frame-ancestors http: https: file: data: blob: 'self'";
 
 const nextConfig: NextConfig = {
-  serverExternalPackages: ['pdf-parse'],
+  serverExternalPackages: ['pdf-parse', '@napi-rs/canvas'],
   async headers() {
     return [
       {

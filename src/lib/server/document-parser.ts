@@ -1,7 +1,5 @@
 import axios from 'axios';
 import * as cheerio from 'cheerio';
-import * as mammoth from 'mammoth';
-import { PDFParse } from 'pdf-parse';
 import { AppError } from './errors';
 
 export class DocumentParserService {
@@ -27,6 +25,9 @@ export class DocumentParserService {
     }
 
     if (ext === 'pdf' || type === 'application/pdf') {
+      // Lazy-load: top-level pdf-parse import crashes Vercel (DOMMatrix / worker).
+      await import('pdf-parse/worker');
+      const { PDFParse } = await import('pdf-parse');
       const parser = new PDFParse({ data: buffer });
       try {
         const parsed = await parser.getText();
@@ -41,6 +42,7 @@ export class DocumentParserService {
       type ===
         'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
     ) {
+      const mammoth = await import('mammoth');
       const result = await mammoth.extractRawText({ buffer });
       return (result.value || '').trim();
     }
@@ -78,17 +80,35 @@ export class DocumentParserService {
       throw new AppError(400, 'Only http/https URLs are allowed');
     }
 
-    const response = await axios.get(url, {
-      timeout: 15000,
-      responseType: 'text',
-      maxContentLength: 2_000_000,
-      headers: {
-        'User-Agent':
-          'ChatbaseCloneBot/0.1 (+local MVP; context ingestion)',
-        Accept: 'text/html,application/xhtml+xml,text/plain,text/markdown,*/*',
-      },
-      validateStatus: (s) => s >= 200 && s < 400,
-    });
+    let response;
+    try {
+      response = await axios.get(url, {
+        timeout: 15000,
+        responseType: 'text',
+        maxContentLength: 2_000_000,
+        headers: {
+          'User-Agent':
+            'ChatDockBot/0.1 (+https://chatdock; context ingestion)',
+          Accept: 'text/html,application/xhtml+xml,text/plain,text/markdown,*/*',
+        },
+        validateStatus: (s) => s >= 200 && s < 400,
+      });
+    } catch (err) {
+      if (axios.isAxiosError(err)) {
+        const status = err.response?.status;
+        if (status) {
+          throw new AppError(
+            400,
+            `Could not fetch URL (HTTP ${status}). Try a public page with readable text.`,
+          );
+        }
+        throw new AppError(
+          400,
+          'Could not fetch that URL. Check the address or try again.',
+        );
+      }
+      throw err;
+    }
 
     const contentType = String(response.headers['content-type'] || '');
     const raw =
