@@ -71,7 +71,9 @@ export type ContextSource = {
   name: string;
   url?: string;
   mimeType?: string;
+  living?: boolean;
   createdAt: string;
+  updatedAt?: string;
   charCount: number;
   chunkCount: number;
   preview: string;
@@ -79,6 +81,19 @@ export type ContextSource = {
 
 export type ContextSourceDetail = ContextSource & {
   content: string;
+};
+
+export type LibraryFile = {
+  id: string;
+  chatbotId: string;
+  title: string;
+  description: string;
+  originalName: string;
+  mimeType: string;
+  size: number;
+  downloadToken: string;
+  downloadUrl: string;
+  createdAt: string;
 };
 
 export type ChatMessage = {
@@ -172,11 +187,38 @@ export const api = {
       method: 'POST',
       body: JSON.stringify({ name, content }),
     }),
+  feedLivingKnowledge: (chatbotId: string, content: string) =>
+    request<ContextSource>(`/api/chatbots/${chatbotId}/context/living`, {
+      method: 'POST',
+      body: JSON.stringify({ content }),
+    }),
   removeContext: (chatbotId: string, sourceId: string) =>
     request<{ ok: boolean }>(
       `/api/chatbots/${chatbotId}/context/${sourceId}`,
       { method: 'DELETE' },
     ),
+
+  listLibraryFiles: (chatbotId: string) =>
+    request<LibraryFile[]>(`/api/chatbots/${chatbotId}/files`),
+  uploadLibraryFile: (
+    chatbotId: string,
+    title: string,
+    description: string,
+    file: File,
+  ) => {
+    const form = new FormData();
+    form.append('title', title);
+    form.append('description', description);
+    form.append('file', file);
+    return request<LibraryFile>(`/api/chatbots/${chatbotId}/files`, {
+      method: 'POST',
+      body: form,
+    });
+  },
+  removeLibraryFile: (chatbotId: string, fileId: string) =>
+    request<{ ok: boolean }>(`/api/chatbots/${chatbotId}/files/${fileId}`, {
+      method: 'DELETE',
+    }),
 
   listSessions: (chatbotId: string) =>
     request<

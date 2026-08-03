@@ -6,6 +6,7 @@ import { useParams } from 'next/navigation';
 import { AppShell } from '@/components/AppShell';
 import { ChatPanel } from '@/components/ChatPanel';
 import { EmbedPanel } from '@/components/EmbedPanel';
+import { FilesPanel } from '@/components/FilesPanel';
 import { RequireAuth } from '@/components/RequireAuth';
 import { SourcesPanel } from '@/components/SourcesPanel';
 import { api, Chatbot } from '@/lib/api';
@@ -22,7 +23,7 @@ function ChatbotContent() {
   const params = useParams<{ id: string }>();
   const id = params.id;
   const [bot, setBot] = useState<Chatbot | null>(null);
-  const [tab, setTab] = useState<'chat' | 'sources' | 'embed'>('chat');
+  const [tab, setTab] = useState<'chat' | 'sources' | 'files' | 'embed'>('chat');
   const [error, setError] = useState('');
 
   async function loadBot() {
@@ -80,6 +81,11 @@ function ChatbotContent() {
           badge: bot.sourceCount,
         },
         {
+          label: 'Files',
+          active: tab === 'files',
+          onClick: () => setTab('files'),
+        },
+        {
           label: 'Embed',
           active: tab === 'embed',
           onClick: () => setTab('embed'),
@@ -91,6 +97,8 @@ function ChatbotContent() {
         <ChatPanel chatbotId={bot.id} />
       ) : tab === 'sources' ? (
         <SourcesPanel chatbotId={bot.id} />
+      ) : tab === 'files' ? (
+        <FilesPanel chatbotId={bot.id} />
       ) : (
         <EmbedPanel bot={bot} onUpdated={setBot} />
       )}

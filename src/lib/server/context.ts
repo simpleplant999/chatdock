@@ -4,6 +4,7 @@ import { ContextSourceDoc, getDb } from './db';
 import { DocumentParserService } from './document-parser';
 import { AppError } from './errors';
 import { guardrailsService } from './guardrails';
+import { LIVING_KNOWLEDGE_NAME } from './living-knowledge';
 import { ragService } from './rag';
 
 const parser = new DocumentParserService();
@@ -18,7 +19,84 @@ export class ContextService {
       .sort({ createdAt: -1 })
       .toArray();
 
+    // Living knowledge first, then newest
+    rows.sort((a, b) => {
+      if (a.role === 'living' && b.role !== 'living') return -1;
+      if (b.role === 'living' && a.role !== 'living') return 1;
+      return b.createdAt.localeCompare(a.createdAt);
+    });
+
     return Promise.all(rows.map((s) => this.toSourceDto(s)));
+  }
+
+  /**
+   * Append knowledge into the chatbot's single Living Knowledge source.
+   * Creates the source on first feed; always re-chunks after update.
+   */
+  async feedLivingKnowledge(
+    userId: string,
+    chatbotId: string,
+    knowledge: string,
+  ) {
+    await chatbotsService.assertOwned(userId, chatbotId);
+    const entry = knowledge.trim();
+    if (!entry) throw new AppError(400, 'Knowledge content is required');
+
+    this.assertSafeContext(entry);
+
+    const sanitized = guardrailsService.sanitizeForStorage(entry);
+    const stamp = new Date().toISOString();
+    const block = `## ${stamp}\n\n${sanitized}`;
+
+    const db = await getDb();
+    const existing = await db.contextSources.findOne({
+      chatbotId,
+      role: 'living',
+    });
+
+    if (!existing) {
+      return this.persistSource({
+        chatbotId,
+        type: 'text',
+        name: LIVING_KNOWLEDGE_NAME,
+        content: `# Living Knowledge\n\nFacts taught to this bot in chat or Sources.\n\n${block}\n`,
+        mimeType: 'text/markdown',
+        role: 'living',
+      });
+    }
+
+    const nextContent = `${existing.content.trimEnd()}\n\n${block}\n`;
+    this.assertSafeContext(nextContent);
+
+    const chunks = ragService.chunkText(nextContent);
+    await db.contextChunks.deleteMany({ sourceId: existing._id });
+    if (chunks.length) {
+      await db.contextChunks.insertMany(
+        chunks.map((content, chunkIndex) => ({
+          _id: uuid(),
+          sourceId: existing._id,
+          chatbotId,
+          content,
+          chunkIndex,
+        })),
+      );
+    }
+
+    await db.contextSources.updateOne(
+      { _id: existing._id },
+      {
+        $set: {
+          content: nextContent,
+          name: LIVING_KNOWLEDGE_NAME,
+          mimeType: 'text/markdown',
+          updatedAt: stamp,
+        },
+      },
+    );
+
+    const updated = await db.contextSources.findOne({ _id: existing._id });
+    if (!updated) throw new AppError(500, 'Failed to update living knowledge');
+    return this.toSourceDto(updated);
   }
 
   async addFile(
@@ -123,6 +201,7 @@ export class ContextService {
     content: string;
     url?: string;
     mimeType?: string;
+    role?: 'living';
   }) {
     const sourceId = uuid();
     const now = new Date().toISOString();
@@ -137,7 +216,9 @@ export class ContextService {
       content: input.content,
       url: input.url,
       mimeType: input.mimeType,
+      role: input.role,
       createdAt: now,
+      updatedAt: input.role === 'living' ? now : undefined,
     });
 
     if (chunks.length) {
@@ -152,18 +233,18 @@ export class ContextService {
       );
     }
 
-    return {
-      id: sourceId,
+    return this.toSourceDto({
+      _id: sourceId,
       chatbotId: input.chatbotId,
       type: input.type,
       name: input.name,
+      content: input.content,
       url: input.url,
       mimeType: input.mimeType,
+      role: input.role,
       createdAt: now,
-      charCount: input.content.length,
-      chunkCount: chunks.length,
-      preview: input.content.slice(0, 180),
-    };
+      updatedAt: input.role === 'living' ? now : undefined,
+    });
   }
 
   private async toSourceDto(s: ContextSourceDoc) {
@@ -179,7 +260,9 @@ export class ContextService {
       name: s.name,
       url: s.url,
       mimeType: s.mimeType,
+      living: s.role === 'living',
       createdAt: s.createdAt,
+      updatedAt: s.updatedAt,
       charCount: s.content.length,
       chunkCount,
       preview: s.content.slice(0, 180),

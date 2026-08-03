@@ -1,4 +1,4 @@
-import { MongoClient, Db, Collection } from 'mongodb';
+import { MongoClient, Db, Collection, Binary } from 'mongodb';
 import * as bcrypt from 'bcryptjs';
 import { v4 as uuid } from 'uuid';
 
@@ -28,7 +28,10 @@ export type ContextSourceDoc = {
   content: string;
   url?: string;
   mimeType?: string;
+  /** Exactly one living knowledge source per chatbot; updated on each feed. */
+  role?: 'living';
   createdAt: string;
+  updatedAt?: string;
 };
 
 export type ContextChunkDoc = {
@@ -56,6 +59,21 @@ export type ChatMessageDoc = {
   createdAt: string;
 };
 
+/** Downloadable files (admin-uploaded); chat can share tokenized download links. */
+export type LibraryFileDoc = {
+  _id: string;
+  chatbotId: string;
+  title: string;
+  description: string;
+  originalName: string;
+  mimeType: string;
+  size: number;
+  downloadToken: string;
+  /** Raw bytes (max ~8MB per file). */
+  data: Binary;
+  createdAt: string;
+};
+
 type Collections = {
   users: Collection<UserDoc>;
   chatbots: Collection<ChatbotDoc>;
@@ -63,6 +81,7 @@ type Collections = {
   contextChunks: Collection<ContextChunkDoc>;
   chatSessions: Collection<ChatSessionDoc>;
   chatMessages: Collection<ChatMessageDoc>;
+  libraryFiles: Collection<LibraryFileDoc>;
 };
 
 const globalForMongo = globalThis as unknown as {
@@ -184,6 +203,8 @@ async function ensureIndexes(cols: Collections) {
     cols.contextChunks.createIndex({ chatbotId: 1 }),
     cols.chatSessions.createIndex({ chatbotId: 1 }),
     cols.chatMessages.createIndex({ sessionId: 1 }),
+    cols.libraryFiles.createIndex({ chatbotId: 1 }),
+    cols.libraryFiles.createIndex({ downloadToken: 1 }, { unique: true }),
   ]);
 }
 
@@ -195,6 +216,7 @@ function collections(db: Db): Collections {
     contextChunks: db.collection<ContextChunkDoc>('context_chunks'),
     chatSessions: db.collection<ChatSessionDoc>('chat_sessions'),
     chatMessages: db.collection<ChatMessageDoc>('chat_messages'),
+    libraryFiles: db.collection<LibraryFileDoc>('library_files'),
   };
 }
 
@@ -261,5 +283,6 @@ export async function deleteChatbotCascade(chatbotId: string) {
     await db.contextChunks.deleteMany({ sourceId: { $in: sourceIds } });
   }
   await db.contextSources.deleteMany({ chatbotId });
+  await db.libraryFiles.deleteMany({ chatbotId });
   await db.chatbots.deleteOne({ _id: chatbotId });
 }

@@ -1,10 +1,13 @@
 import { v4 as uuid } from 'uuid';
 import { ASSISTANT_GREETING } from '@/lib/assistant';
 import { chatbotsService } from './chatbots';
+import { contextService } from './context';
 import { ChatMessageDoc, getDb } from './db';
 import { AppError } from './errors';
 import { generateGroundedAnswer, isGroqConfigured } from './groq';
 import { guardrailsService } from './guardrails';
+import { libraryFilesService } from './library-files';
+import { parseFeedIntent } from './living-knowledge';
 import { ragService } from './rag';
 
 type MessageSource = {
@@ -72,10 +75,107 @@ export class ChatService {
     userId: string,
     chatbotId: string,
     sessionId: string,
-    dto: { content: string },
+    dto: { content: string; baseUrl?: string },
   ) {
     await chatbotsService.assertOwned(userId, chatbotId);
+
+    const knowledge = parseFeedIntent(dto.content);
+    if (knowledge) {
+      return this.feedKnowledgeFromChat(
+        userId,
+        chatbotId,
+        sessionId,
+        dto.content,
+        knowledge,
+      );
+    }
+
     return this.sendMessageForBot(chatbotId, sessionId, dto);
+  }
+
+  /** Owner-only: save taught facts into the single Living Knowledge source. */
+  private async feedKnowledgeFromChat(
+    userId: string,
+    chatbotId: string,
+    sessionId: string,
+    rawContent: string,
+    knowledge: string,
+  ) {
+    await this.loadSession(chatbotId, sessionId);
+    const content = guardrailsService.sanitizeForStorage(rawContent);
+    const now = new Date().toISOString();
+
+    const userMessage = await this.insertMessage({
+      sessionId,
+      role: 'user',
+      content,
+      createdAt: now,
+    });
+
+    const inputCheck = guardrailsService.checkUserInput(knowledge);
+    if (!inputCheck.allowed) {
+      const assistantMessage = await this.insertMessage({
+        sessionId,
+        role: 'assistant',
+        content: inputCheck.message,
+        createdAt: new Date().toISOString(),
+        sources: [],
+        guardrail: { blocked: true, code: inputCheck.code },
+      });
+      await this.touchSession(sessionId, assistantMessage.createdAt);
+      return {
+        userMessage,
+        assistantMessage,
+        session: await this.loadSession(chatbotId, sessionId),
+      };
+    }
+
+    try {
+      const source = await contextService.feedLivingKnowledge(
+        userId,
+        chatbotId,
+        knowledge,
+      );
+      const assistantMessage = await this.insertMessage({
+        sessionId,
+        role: 'assistant',
+        content: `Got it — I saved that to **${source.name}**. I’ll use it in future answers. (One living file is updated each time you teach me.)`,
+        createdAt: new Date().toISOString(),
+        sources: [
+          {
+            sourceId: source.id,
+            sourceName: source.name,
+            excerpt: knowledge.slice(0, 160),
+          },
+        ],
+        guardrail: { blocked: false },
+      });
+      await this.touchSession(sessionId, assistantMessage.createdAt);
+      return {
+        userMessage,
+        assistantMessage,
+        session: await this.loadSession(chatbotId, sessionId),
+      };
+    } catch (err) {
+      const message =
+        err instanceof AppError
+          ? err.message
+          : 'I couldn’t save that knowledge. Please try again.';
+      const assistantMessage = await this.insertMessage({
+        sessionId,
+        role: 'assistant',
+        content: message,
+        createdAt: new Date().toISOString(),
+        sources: [],
+        guardrail: { blocked: true, code: 'feed_failed' },
+      });
+      await this.touchSession(sessionId, assistantMessage.createdAt);
+      return {
+        userMessage,
+        assistantMessage,
+        session: await this.loadSession(chatbotId, sessionId),
+      };
+    }
   }
 
   /** Public embed: always creates a brand-new session */
@@ -92,7 +192,7 @@ export class ChatService {
   async sendPublicMessage(
     chatbotId: string,
     sessionId: string,
-    dto: { content: string },
+    dto: { content: string; baseUrl?: string },
   ) {
     await chatbotsService.assertPublished(chatbotId);
     return this.sendMessageForBot(chatbotId, sessionId, dto);
@@ -133,7 +233,7 @@ export class ChatService {
   private async sendMessageForBot(
     chatbotId: string,
     sessionId: string,
-    dto: { content: string },
+    dto: { content: string; baseUrl?: string },
   ) {
     await this.loadSession(chatbotId, sessionId);
     const content = guardrailsService.sanitizeForStorage(dto.content);
@@ -174,7 +274,17 @@ export class ChatService {
       content: c.content,
     }));
 
-    if (chunks.length === 0) {
+    const libraryFiles = await libraryFilesService.listForChat(
+      chatbotId,
+      dto.baseUrl,
+    );
+    const matchedFiles = libraryFilesService.matchForQuestion(
+      content,
+      libraryFiles,
+    );
+    const filePassages = libraryFilesService.toContextPassages(matchedFiles);
+
+    if (chunks.length === 0 && filePassages.length === 0) {
       const assistantMessage = await this.insertMessage({
         sessionId,
         role: 'assistant',
@@ -192,27 +302,79 @@ export class ChatService {
       };
     }
 
-    const retrieved = ragService.retrieve(content, chunks, 8, 0.2);
-    const retrievedContents = retrieved.map((r) => r.content);
+    const retrieved =
+      chunks.length > 0
+        ? ragService.retrieve(content, chunks, 8, 0.2)
+        : [];
+    const retrievedContents = [
+      ...filePassages,
+      ...retrieved.map((r) => r.content),
+    ];
+
+    if (retrievedContents.length === 0) {
+      const assistantMessage = await this.insertMessage({
+        sessionId,
+        role: 'assistant',
+        content:
+          "I’m not sure about that — I don’t have enough info to answer confidently. Want to try another question?",
+        createdAt: new Date().toISOString(),
+        sources: [],
+        guardrail: { blocked: true, code: 'ungrounded' },
+      });
+      await this.touchSession(sessionId, assistantMessage.createdAt);
+      return {
+        userMessage,
+        assistantMessage,
+        session: await this.loadSession(chatbotId, sessionId),
+      };
+    }
 
     let draftAnswer: string;
     try {
-      if (isGroqConfigured() && retrieved.length > 0) {
+      if (isGroqConfigured()) {
         const groq = await generateGroundedAnswer({
           question: content,
           contextPassages: retrievedContents,
           systemPrompt: await chatbotsService.getSystemPrompt(chatbotId),
         });
         draftAnswer = groq.answer;
+      } else if (matchedFiles.length && retrieved.length === 0) {
+        draftAnswer = matchedFiles
+          .map(
+            (f) =>
+              `Here’s **${f.title}** — ${f.description}\n\n[Download ${f.title}](${f.downloadUrl})`,
+          )
+          .join('\n\n');
       } else {
         draftAnswer = ragService.answerFromContext(content, retrieved).answer;
+        if (matchedFiles.length) {
+          const links = matchedFiles
+            .map((f) => `- [${f.title}](${f.downloadUrl})`)
+            .join('\n');
+          draftAnswer = `${draftAnswer}\n\n**Downloads**\n${links}`;
+        }
       }
     } catch (err) {
       console.error(
         '[groq]',
         err instanceof Error ? err.message : 'Groq generation failed',
       );
-      draftAnswer = ragService.answerFromContext(content, retrieved).answer;
+      if (matchedFiles.length && retrieved.length === 0) {
+        draftAnswer = matchedFiles
+          .map(
+            (f) =>
+              `Here’s **${f.title}** — ${f.description}\n\n[Download ${f.title}](${f.downloadUrl})`,
+          )
+          .join('\n\n');
+      } else {
+        draftAnswer = ragService.answerFromContext(content, retrieved).answer;
+        if (matchedFiles.length) {
+          const links = matchedFiles
+            .map((f) => `- [${f.title}](${f.downloadUrl})`)
+            .join('\n');
+          draftAnswer = `${draftAnswer}\n\n**Downloads**\n${links}`;
+        }
+      }
     }
 
     const outputCheck = guardrailsService.checkGeneratedAnswer(
@@ -243,7 +405,11 @@ export class ChatService {
       role: 'assistant',
       content: outputCheck.sanitizedAnswer || draftAnswer,
       createdAt: new Date().toISOString(),
-      sources: [],
+      sources: matchedFiles.map((f) => ({
+        sourceId: f.id,
+        sourceName: f.title,
+        excerpt: f.downloadUrl,
+      })),
       guardrail: { blocked: false },
     });
 

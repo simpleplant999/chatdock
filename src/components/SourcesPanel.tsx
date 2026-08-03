@@ -9,11 +9,12 @@ export function SourcesPanel({ chatbotId }: { chatbotId: string }) {
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
-  const [tab, setTab] = useState<'file' | 'link' | 'text'>('file');
+  const [tab, setTab] = useState<'file' | 'link' | 'text' | 'feed'>('feed');
   const [url, setUrl] = useState('');
   const [linkName, setLinkName] = useState('');
   const [textName, setTextName] = useState('');
   const [textContent, setTextContent] = useState('');
+  const [feedContent, setFeedContent] = useState('');
   const [previewId, setPreviewId] = useState<string | null>(null);
 
   const load = useCallback(async () => {
@@ -85,6 +86,22 @@ export function SourcesPanel({ chatbotId }: { chatbotId: string }) {
     }
   }
 
+  async function onFeedLiving(e: FormEvent) {
+    e.preventDefault();
+    if (!feedContent.trim()) return;
+    setBusy(true);
+    setError('');
+    try {
+      await api.feedLivingKnowledge(chatbotId, feedContent.trim());
+      setFeedContent('');
+      await load();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to save knowledge');
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function onRemove(sourceId: string, name: string) {
     if (!confirm(`Remove source “${name}”?`)) return;
     try {
@@ -101,11 +118,12 @@ export function SourcesPanel({ chatbotId }: { chatbotId: string }) {
       <section className="rounded-2xl border border-[var(--line)] bg-white/90 p-5 shadow-[0_1px_0_rgba(16,35,31,0.04)]">
         <h2 className="font-display text-2xl">Add context</h2>
         <p className="mt-1 text-sm text-[var(--ink-soft)]">
-          Supported files: .md, .pdf, .txt, .doc, .docx — or paste a public URL.
+          Feed facts into one Living Knowledge file, or upload extra docs (.md,
+          .pdf, .txt, .doc, .docx) / links.
         </p>
 
-        <div className="mt-4 flex gap-1 rounded-xl bg-[var(--paper)] p-1">
-          {(['file', 'link', 'text'] as const).map((key) => (
+        <div className="mt-4 flex flex-wrap gap-1 rounded-xl bg-[var(--paper)] p-1">
+          {(['feed', 'file', 'link', 'text'] as const).map((key) => (
             <button
               key={key}
               type="button"
@@ -116,12 +134,39 @@ export function SourcesPanel({ chatbotId }: { chatbotId: string }) {
                   : 'text-[var(--ink-soft)] hover:text-[var(--ink)]'
               }`}
             >
-              {key}
+              {key === 'feed' ? 'Teach' : key}
             </button>
           ))}
         </div>
 
         <div className="mt-4">
+          {tab === 'feed' && (
+            <form onSubmit={onFeedLiving} className="space-y-3">
+              <p className="text-xs text-[var(--ink-soft)]">
+                Appends to a single{' '}
+                <span className="font-medium text-[var(--ink)]">
+                  Living Knowledge.md
+                </span>{' '}
+                source. Each save updates that same file.
+              </p>
+              <textarea
+                value={feedContent}
+                onChange={(e) => setFeedContent(e.target.value)}
+                placeholder="e.g. Jhomell’s contract is employment-2024.pdf under Contracts…"
+                rows={8}
+                required
+                className="w-full resize-y rounded-xl border border-[var(--line)] bg-[var(--paper)] px-3 py-2.5 text-sm outline-none ring-[var(--accent)] focus:ring-2"
+              />
+              <button
+                type="submit"
+                disabled={busy}
+                className="w-full rounded-xl bg-[var(--accent)] px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-[var(--accent-deep)] disabled:opacity-60"
+              >
+                {busy ? 'Saving…' : 'Save to Living Knowledge'}
+              </button>
+            </form>
+          )}
+
           {tab === 'file' && (
             <form onSubmit={onUploadFile} className="space-y-4">
               <input
@@ -226,8 +271,16 @@ export function SourcesPanel({ chatbotId }: { chatbotId: string }) {
                   onClick={() => setPreviewId(source.id)}
                   className="min-w-0 flex-1 rounded-lg text-left transition hover:opacity-90"
                 >
-                  <p className="font-medium text-[var(--ink)]">{source.name}</p>
+                  <p className="font-medium text-[var(--ink)]">
+                    {source.name}
+                    {source.living ? (
+                      <span className="ml-2 align-middle text-[10px] font-semibold uppercase tracking-wide text-[var(--accent-deep)]">
+                        Living
+                      </span>
+                    ) : null}
+                  </p>
                   <p className="mt-1 text-xs uppercase tracking-wide text-[var(--ink-soft)]">
+                    {source.living ? 'teach · ' : ''}
                     {source.type}
                     {source.url ? ` · ${source.url}` : ''} · {source.charCount}{' '}
                     chars · {source.chunkCount} chunks
