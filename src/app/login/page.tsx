@@ -4,12 +4,13 @@ import { FormEvent, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth';
+import { AuthAtmosphere } from '@/components/AuthAtmosphere';
 
 export default function LoginPage() {
   const { user, loading, login } = useAuth();
   const router = useRouter();
-  const [email, setEmail] = useState('demo@example.com');
-  const [password, setPassword] = useState('password123');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
 
@@ -32,15 +33,31 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="grid min-h-screen place-items-center px-4">
-      <div className="w-full max-w-md rounded-2xl border border-[var(--line)] bg-white/90 p-6 shadow-sm sm:p-8">
+    <AuthAtmosphere>
+      <div className="w-full max-w-md rounded-2xl border border-white/15 bg-white/95 p-6 shadow-2xl backdrop-blur sm:p-8">
+        <Link
+          href="/"
+          aria-label="Back to home"
+          className="mb-4 inline-flex h-9 w-9 items-center justify-center rounded-lg text-[var(--ink-soft)] transition hover:bg-[var(--paper-2)] hover:text-[var(--ink)]"
+        >
+          <svg
+            viewBox="0 0 24 24"
+            width="20"
+            height="20"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            aria-hidden="true"
+          >
+            <path d="M15 18l-6-6 6-6" />
+          </svg>
+        </Link>
         <p className="font-display text-3xl text-[var(--ink)]">ChatDock</p>
         <h1 className="mt-2 text-lg font-semibold">Log in</h1>
         <p className="mt-1 text-sm text-[var(--ink-soft)]">
-          Demo account: demo@example.com / password123 ·{' '}
-          <Link href="/" className="text-[var(--accent)]">
-            Back to home
-          </Link>
+          Your bots and sources stay private to your account.
         </p>
 
         <form onSubmit={onSubmit} className="mt-6 space-y-4">
@@ -86,6 +103,6 @@ export default function LoginPage() {
           </Link>
         </p>
       </div>
-    </div>
+    </AuthAtmosphere>
   );
 }
